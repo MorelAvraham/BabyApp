@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f2876b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>איתן אור | מעקב תינוק</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <!-- ═══════════════════════════════════════════════
+         PIN ENTRY SCREEN
+         ═══════════════════════════════════════════════ -->
+  <div id="pinScreen" class="pin-screen hidden">
+    <div class="pin-screen__content">
+      <div class="pin-screen__icon">🔒</div>
+      <h2 style="font-size: 1.5rem; margin-bottom: 24px;">נדרשת סיסמה</h2>
+      <form id="pinForm" style="display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%;">
+        <input type="tel" id="pinInput" placeholder="הכנס קוד" autocomplete="off"
+          style="width: 100%; max-width: 250px; text-align: center; font-size: 1.5rem; letter-spacing: 0.2em; padding: 12px; border-radius: 12px; border: 2px solid var(--line); color: var(--text); background: var(--surface);" />
+        <button type="submit" class="primary-button" style="width: 100%; max-width: 250px;">כניסה</button>
+        <p id="pinError" style="color: #ff3b30; font-size: 0.9rem; display: none; margin: 0;">קוד שגוי, נסה שוב</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+         APP SHELL — fixed 100dvh, no scroll on body
+         ═══════════════════════════════════════════════ -->
+  <div class="app-shell">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar__title">
+        <p class="topbar__eyebrow">יומן תינוק משותף</p>
+        <h1 id="babyNameHeading">איתן אור</h1>
+        <div class="topbar__meta">
+          <span id="topbarAge" class="topbar__age"></span>
+          <span id="lastUpdatedLabel" class="topbar__updated">עדיין לא סונכרן</span>
+        </div>
+      </div>
+      <div class="topbar__actions">
+        <span id="syncBadge" class="sync-badge">
+          <span class="sync-dot"></span>
+          <span class="sync-badge__text">מתחבר...</span>
+        </span>
+        <button id="whoToggle" class="who-toggle" type="button">👩 אמא</button>
+        <button id="themeToggle" class="icon-button" type="button" title="מצב כהה">🌙</button>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Content (tab views) -->
+    <main class="main-content" id="mainContent">
+
+      <!-- ══ TAB: Home ══ -->
+      <div class="tab-view active" id="tabHome">
+
+        <!-- Feed Reminder Banner (hidden by default, shown by JS) -->
+        <div id="feedReminderBanner" class="feed-reminder-banner hidden">
+          <span class="feed-reminder-banner__icon">🔔</span>
+          <div class="feed-reminder-banner__body">
+            <p class="feed-reminder-banner__title">⏰ תזכורת האכלה</p>
+            <p class="feed-reminder-banner__text" id="feedReminderText"></p>
+          </div>
+        </div>
+
+        <!-- Quick Actions Hero -->
+        <section class="hero-panel">
+          <p class="panel-kicker">עדכון מהיר</p>
+          <div class="quick-actions">
+            <button class="quick-action quick-action--sleep" data-quick-type="sleep" type="button">
+              <span class="quick-action__emoji">🌙</span>
+              <span class="quick-action__label">נרדם</span>
+            </button>
+            <button class="quick-action quick-action--wake" data-quick-type="wake" type="button">
+              <span class="quick-action__emoji">☀️</span>
+              <span class="quick-action__label">התעורר</span>
+            </button>
+            <button class="quick-action quick-action--meal" data-quick-type="meal" type="button">
+              <span class="quick-action__emoji">🍼</span>
+              <span class="quick-action__label">אכל</span>
+            </button>
+            <button class="quick-action quick-action--poop" data-quick-type="poop" type="button">
+              <span class="quick-action__emoji">💩</span>
+              <span class="quick-action__label">קקי</span>
+            </button>
+            <button class="quick-action quick-action--pee" data-quick-type="pee" type="button">
+              <span class="quick-action__emoji">💦</span>
+              <span class="quick-action__label">פיפי</span>
+            </button>
+            <button class="quick-action quick-action--medication" data-quick-type="medication" type="button">
+              <span class="quick-action__emoji">💊</span>
+              <span class="quick-action__label">תרופה</span>
+            </button>
+            <button class="quick-action quick-action--tasting" data-quick-type="tasting" type="button">
+              <span class="quick-action__emoji">🥦</span>
+              <span class="quick-action__label">טעימה</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Daily Summary -->
+        <section class="panel panel--summary">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">היום</p>
+              <h2>סיכום מהיר</h2>
+            </div>
+            <button id="resetToday" class="secondary-button" type="button">נקה היום</button>
+          </div>
+          <div class="summary-grid">
+            <article class="summary-card">
+              <span class="summary-card__label">☀️ התעורר</span>
+              <strong id="wakeSummary">עדיין לא</strong>
+              <span class="summary-card__since" id="wakeSince"></span>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">🌙 נרדם</span>
+              <strong id="sleepSummary">עדיין לא</strong>
+              <span class="summary-card__since" id="sleepSince"></span>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">🍼 ארוחות</span>
+              <strong id="mealCount" class="summary-card__count">0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">💩 קקי</span>
+              <strong id="poopCount" class="summary-card__count">0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">💦 פיפי</span>
+              <strong id="peeCount" class="summary-card__count">0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">💊 תרופות</span>
+              <strong id="medCount" class="summary-card__count">0</strong>
+            </article>
+            <article class="summary-card summary-card--wide">
+              <span class="summary-card__label">⏱ משך שינה אחרון</span>
+              <strong id="sleepDuration">לא ידוע</strong>
+            </article>
+            <article class="summary-card summary-card--wide">
+              <span class="summary-card__label">🍼 ארוחה אחרונה</span>
+              <strong id="lastMealSummary">עדיין לא</strong>
+              <span class="summary-card__since" id="lastMealSince"></span>
+            </article>
+            <article class="summary-card summary-card--wide">
+              <span class="summary-card__label">⏱ עדכון אחרון</span>
+              <strong id="latestEntrySummary">עדיין לא עודכן</strong>
+            </article>
+          </div>
+        </section>
+
+        <p class="fab-hint">לחץ <strong>+</strong> להוספת אירוע מפורט</p>
+      </div><!-- /tabHome -->
+
+      <!-- ══ TAB: Timeline ══ -->
+      <div class="tab-view" id="tabTimeline">
+        <!-- 24h Gantt Bar -->
+        <section class="panel panel--gantt panel--gantt-top">
+          <div class="timeline-header-block">
+            <div class="timeline-date-controls timeline-date-controls--pill">
+              <button id="prevDayBtn" class="timeline-date-nav" type="button" aria-label="יום קודם">&rarr;</button>
+
+              <input type="date" id="timelineDatePicker" class="timeline-date-input" />
+
+              <button id="nextDayBtn" class="timeline-date-nav" type="button" aria-label="יום הבא">&larr;</button>
+            </div>
+          </div>
+
+          <div id="timelineBar" class="timeline-bar-container">
+            <div class="timeline-bar__track"></div>
+            <div class="timeline-bar__axis timeline-bar__axis--rtl">
+              <span>24</span><span>20</span><span>16</span><span>12</span><span>8</span><span>4</span><span>0</span>
+            </div>
+          </div>
+          <div id="timelineBarDetails" class="timeline-bar-details">
+            <strong>לחצו על מקטע בלוח</strong>
+            <span>אפשר לראות שעות שינה או ערות בצורה ברורה יותר.</span>
+          </div>
+        </section>
+        <section class="panel panel--timeline">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">יומן מסודר</p>
+              <h2>כל מה שקרה ביום שנבחר</h2>
+            </div>
+          </div>
+          <div class="timeline-toolbar">
+            <div id="timelineFilters" class="timeline-filters" role="tablist" aria-label="סינון היסטוריה">
+              <button class="timeline-filter-chip active" data-timeline-filter="all" type="button">הכל</button>
+              <button class="timeline-filter-chip" data-timeline-filter="sleep" type="button">שינה</button>
+              <button class="timeline-filter-chip" data-timeline-filter="food" type="button">אוכל</button>
+              <button class="timeline-filter-chip" data-timeline-filter="diaper" type="button">חיתולים</button>
+              <button class="timeline-filter-chip" data-timeline-filter="health" type="button">בריאות</button>
+            </div>
+            <p id="timelineResultsMeta" class="timeline-results-meta">מוצגים כל האירועים של היום הנבחר.</p>
+            <div id="timelineDaySummary" class="timeline-day-summary" aria-label="תקציר היום הנבחר"></div>
+          </div>
+          <div id="timeline" class="stack-list"></div>
+        </section>
+      </div><!-- /tabTimeline -->
+
+      <!-- ══ TAB: Milestones ══ -->
+      <div class="tab-view" id="tabMilestones">
+        <!-- Age Hero Card -->
+        <section class="hero-panel age-hero-card">
+          <div class="age-hero-content">
+            <span class="age-hero-emoji">🎈</span>
+            <h2 id="heroAgeDisplay">מחשב גיל...</h2>
+            <p class="age-hero-subtitle">הגיל המדויק של איתן אור</p>
+          </div>
+        </section>
+
+        <section class="panel panel--milestones-list">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">הישגים</p>
+              <h2>אבני הדרך</h2>
+            </div>
+          </div>
+          <div id="milestonesList" class="stack-list"></div>
+        </section>
+        <p class="fab-hint">לחץ <strong>+</strong> להוספת אבן דרך חדשה</p>
+      </div><!-- /tabMilestones -->
+
+      <!-- ══ TAB: Health ══ -->
+      <div class="tab-view" id="tabHealth">
+
+        <!-- Growth Panel -->
+        <section class="panel" style="margin-top: 14px;">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">גדילה</p>
+              <h2>מדידות</h2>
+            </div>
+            <button class="secondary-button" id="openGrowthSheet" type="button">+ מדידה</button>
+          </div>
+          <div id="growthList" class="stack-list"></div>
+        </section>
+
+        <!-- Medical Log Panel -->
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">בריאות</p>
+              <h2>יומן רפואי</h2>
+            </div>
+            <button class="secondary-button" id="openMedicalSheet" type="button">+ אירוע</button>
+          </div>
+          <div id="medicalList" class="stack-list"></div>
+        </section>
+
+        <!-- Pumping & Inventory Panel -->
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">שאיבה</p>
+              <h2>שאיבות ומלאי</h2>
+            </div>
+            <button class="secondary-button" id="openPumpingSheet" type="button">+ שאיבה</button>
+          </div>
+          <div class="pumping-stash">
+            <span class="pumping-stash__label">🍶 מלאי נוכחי</span>
+            <strong id="pumpingTotalMl" class="pumping-stash__total">0 מ״ל</strong>
+          </div>
+          <div id="pumpingList" class="stack-list" style="margin-top: 10px;"></div>
+        </section>
+
+        <p class="fab-hint">לחץ <strong>+</strong> להוספת אירוע בריאות</p>
+      </div><!-- /tabHealth -->
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav" role="navigation" aria-label="ניווט ראשי">
+      <button class="bottom-nav__item active" data-nav-tab="home" type="button">
+        <span class="bottom-nav__icon">🏠</span>
+        <span class="bottom-nav__label">בית</span>
+      </button>
+      <button class="bottom-nav__item" data-nav-tab="timeline" type="button">
+        <span class="bottom-nav__icon">📋</span>
+        <span class="bottom-nav__label">יומן</span>
+      </button>
+      <button class="bottom-nav__item" data-nav-tab="milestones" type="button">
+        <span class="bottom-nav__icon">⭐</span>
+        <span class="bottom-nav__label">אבני דרך</span>
+      </button>
+      <button class="bottom-nav__item" data-nav-tab="health" type="button">
+        <span class="bottom-nav__icon">🩺</span>
+        <span class="bottom-nav__label">בריאות</span>
+      </button>
+    </nav>
+
+  </div><!-- /.app-shell -->
+
+  <!-- ═══════════════════════════════════════════════
+         FIXED OVERLAYS — outside app-shell so that
+         position:fixed on app-shell doesn't trap them
+         ═══════════════════════════════════════════════ -->
+
+  <!-- Floating Action Button -->
+  <button class="fab hidden" id="fabAdd" type="button" aria-label="הוסף אירוע">+</button>
+
+  <!-- Health FAB Speed Dial -->
+  <div id="fabHealthMenu" class="fab-health-menu hidden" role="menu">
+    <button class="fab-health-option" id="fabHealthGrowth" type="button">
+      <span class="fab-health-option__label">מדידת גדילה</span>
+      <span class="fab-health-option__icon">📏</span>
+    </button>
+    <button class="fab-health-option" id="fabHealthMedical" type="button">
+      <span class="fab-health-option__label">אירוע רפואי</span>
+      <span class="fab-health-option__icon">🩺</span>
+    </button>
+    <button class="fab-health-option" id="fabHealthPumping" type="button">
+      <span class="fab-health-option__label">שאיבה</span>
+      <span class="fab-health-option__icon">🍶</span>
+    </button>
+  </div>
+
+  <!-- Sheet Overlay (backdrop) -->
+  <div class="sheet-overlay" id="sheetOverlay" role="presentation"></div>
+
+  <!-- ── Entry Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetEntry" role="dialog" aria-modal="true" aria-label="הוספת אירוע">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>הוספת אירוע</h3>
+      <button class="sheet-close" id="closeSheetEntry" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="dailyForm" class="form-grid">
+        <label>
+          סוג אירוע
+          <select name="type" id="entryType">
+            <option value="wake">☀️ התעורר</option>
+            <option value="sleep">🌙 נרדם</option>
+            <option value="meal">🍼 אכל</option>
+            <option value="poop">💩 קקי</option>
+            <option value="pee">💦 פיפי</option>
+            <option value="medication">💊 תרופה/ויטמין</option>
+            <option value="tasting">🥦 טעימה</option>
+          </select>
+        </label>
+        <label>
+          מתי
+          <input id="entryTime" name="time" type="datetime-local" required />
+        </label>
+        <label>
+          פרטים (אופציונלי)
+          <input id="entryDetails" name="details" type="text" placeholder="למשל: נרדם בעגלה" />
+        </label>
+        <label>
+          מטפל
+          <select id="entryWhoSelect" name="who">
+            <option value="mom">👩 אמא</option>
+            <option value="dad">👨 אבא</option>
+            <option value="sabaHaim">👴 סבא חיים</option>
+            <option value="savtaBruria">👵 סבתא ברוריה</option>
+            <option value="savtaNaama">👵 סבתא נעמה</option>
+            <option value="lulit">🦸‍♀️ לולית</option>
+            <option value="__custom__">🧑 שם אחר</option>
+          </select>
+        </label>
+        <label id="entryWhoCustomLabel" class="hidden">
+          שם מטפל מותאם אישית
+          <input id="entryWhoCustom" name="whoCustom" type="text" placeholder="למשל: בייביסיטר ערב" />
+        </label>
+        <!-- Medication quick-select pills — shown only when type=medication -->
+        <div id="medPillsSection" class="hidden">
+          <p class="med-pills-label">בחר סוג מהיר:</p>
+          <div class="med-pills">
+            <button type="button" class="med-pill" data-med="ויטמין D">☀️ ויטמין D</button>
+            <button type="button" class="med-pill" data-med="ברזל">🩸 ברזל</button>
+            <button type="button" class="med-pill" data-med="חומצה פולית">🌿 חומצה פולית</button>
+            <button type="button" class="med-pill" data-med="מורידי חום">🌡️ מורידי חום</button>
+          </div>
+        </div>
+        <div id="tastingRatingSection" class="hidden">
+          <p class="med-pills-label">איך היה לו?</p>
+          <div class="rating-group">
+            <button type="button" class="rating-btn" data-rating="1" title="נורא">🤮</button>
+            <button type="button" class="rating-btn" data-rating="2" title="לא אהב">😒</button>
+            <button type="button" class="rating-btn" data-rating="3" title="סביר">😐</button>
+            <button type="button" class="rating-btn" data-rating="4" title="טוב">🙂</button>
+            <button type="button" class="rating-btn" data-rating="5" title="מצוין">😍</button>
+          </div>
+        </div>
+        <label id="mlAmountLabel" class="hidden">
+          כמות במ״ל (אופציונלי)
+          <input id="entryMlAmount" name="mlAmount" type="number" min="0" max="1000" step="5" placeholder="למשל: 120" />
+        </label>
+        <input type="hidden" id="editingEntryId" value="" />
+        <button class="primary-button" id="entrySubmitBtn" type="submit">שמור אירוע ✓</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Milestone Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetMilestone" role="dialog" aria-modal="true" aria-label="אבן דרך">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>אבן דרך חדשה 🎉</h3>
+      <button class="sheet-close" id="closeSheetMilestone" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="milestoneForm" class="form-grid">
+        <label>
+          אבן דרך
+          <select id="milestoneType" name="milestone">
+            <option value="roll">🔄 התהפך</option>
+            <option value="crawl">🐛 זחל</option>
+            <option value="sit">🧘 ישב לבד</option>
+            <option value="stand">🧍 עמד</option>
+            <option value="walk">👣 הלך</option>
+          </select>
+        </label>
+        <label>
+          תאריך
+          <input id="milestoneDate" name="date" type="date" required />
+        </label>
+        <label>
+          הערה (אופציונלי)
+          <input id="milestoneNotes" name="notes" type="text" placeholder="למשל: אצל סבתא מול כולם" />
+        </label>
+        <button class="primary-button" type="submit">שמור אבן דרך 🎉</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Caregiver Bottom Sheet ── -->
+  <div class="bottom-sheet bottom-sheet--centered" id="sheetCaregiver" role="dialog" aria-modal="true" aria-label="בחר מטפל">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>מי מטפל עכשיו? 👶</h3>
+      <button class="sheet-close" id="closeSheetCaregiver" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="caregiver-grid">
+        <button class="caregiver-btn" data-who="mom" type="button">
+          <span class="caregiver-btn__emoji">👩</span>
+          <span>אמא</span>
+        </button>
+        <button class="caregiver-btn" data-who="dad" type="button">
+          <span class="caregiver-btn__emoji">👨</span>
+          <span>אבא</span>
+        </button>
+        <button class="caregiver-btn" data-who="sabaHaim" type="button">
+          <span class="caregiver-btn__emoji">👴</span>
+          <span>סבא חיים</span>
+        </button>
+        <button class="caregiver-btn" data-who="savtaBruria" type="button">
+          <span class="caregiver-btn__emoji">👵</span>
+          <span>סבתא ברוריה</span>
+        </button>
+        <button class="caregiver-btn" data-who="savtaNaama" type="button">
+          <span class="caregiver-btn__emoji">👵</span>
+          <span>סבתא נעמה</span>
+        </button>
+        <button class="caregiver-btn" data-who="lulit" type="button">
+          <span class="caregiver-btn__emoji">🦸‍♀️</span>
+          <span>לולית</span>
+        </button>
+      </div>
+      <div class="caregiver-custom">
+        <label class="caregiver-custom__label">
+          בייביסיטר / אחר
+          <input id="customCaregiverInput" type="text" placeholder="הכנס שם..." maxlength="30" />
+        </label>
+        <button class="primary-button" id="applyCaregiverBtn" type="button">אישור ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Poop Choice Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetPoop" role="dialog" aria-modal="true" aria-label="מה נרשם?">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>💩 מה נרשם?</h3>
+      <button class="sheet-close" id="closeSheetPoop" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="poop-choice-grid">
+        <button class="poop-choice-btn poop-choice-btn--both" id="poopChoiceBoth" type="button">
+          <span class="poop-choice-btn__emoji">💩💦</span>
+          <span class="poop-choice-btn__label">קקי ופיפי</span>
+        </button>
+        <button class="poop-choice-btn poop-choice-btn--poop" id="poopChoicePoop" type="button">
+          <span class="poop-choice-btn__emoji">💩</span>
+          <span class="poop-choice-btn__label">רק קקי</span>
+        </button>
+        <button class="poop-choice-btn poop-choice-btn--cancel" id="poopChoiceCancel" type="button">
+          <span class="poop-choice-btn__emoji">✕</span>
+          <span class="poop-choice-btn__label">ביטול</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Growth Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetGrowth" role="dialog" aria-modal="true" aria-label="מדידת גדילה">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>📏 מדידת גדילה</h3>
+      <button class="sheet-close" id="closeSheetGrowth" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="growthForm" class="form-grid">
+        <label>
+          תאריך
+          <input id="growthDate" name="date" type="date" required />
+        </label>
+        <label>
+          משקל (ק״ג)
+          <input id="growthWeight" name="weight" type="number" step="0.01" min="0" max="30" placeholder="למשל: 5.40" />
+        </label>
+        <label>
+          גובה (ס״מ)
+          <input id="growthHeight" name="height" type="number" step="0.1" min="0" max="120" placeholder="למשל: 58.5" />
+        </label>
+        <label>
+          היקף ראש (ס״מ)
+          <input id="growthHead" name="head" type="number" step="0.1" min="0" max="60" placeholder="למשל: 38.0" />
+        </label>
+        <button class="primary-button" type="submit">שמור מדידה ✓</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Medical Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetMedical" role="dialog" aria-modal="true" aria-label="אירוע רפואי">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>🩺 אירוע רפואי</h3>
+      <button class="sheet-close" id="closeSheetMedical" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="medicalForm" class="form-grid">
+        <label>
+          סוג אירוע
+          <select id="medicalType" name="type">
+            <option value="vaccine">💉 חיסון</option>
+            <option value="doctor">🩺 ביקור רופא</option>
+            <option value="fever">🌡️ חום</option>
+            <option value="note">📝 הערה</option>
+          </select>
+        </label>
+        <label>
+          תאריך
+          <input id="medicalDate" name="date" type="date" required />
+        </label>
+        <label id="medicalTempLabel" class="hidden">
+          טמפרטורה (°C)
+          <input id="medicalTemp" name="temp" type="number" step="0.1" min="35" max="43" placeholder="למשל: 38.5" />
+        </label>
+        <label>
+          פרטים / הערות
+          <input id="medicalDetails" name="details" type="text" placeholder="למשל: חיסון DTP, ביקור שגרתי..." />
+        </label>
+        <button class="primary-button" type="submit">שמור אירוע ✓</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Pumping Bottom Sheet ── -->
+  <div class="bottom-sheet" id="sheetPumping" role="dialog" aria-modal="true" aria-label="שאיבה">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>🍶 שאיבה</h3>
+      <button class="sheet-close" id="closeSheetPumping" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="pumpingForm" class="form-grid">
+        <label>
+          תאריך ושעה
+          <input id="pumpingTime" name="time" type="datetime-local" required />
+        </label>
+        <label>
+          כמות (מ״ל)
+          <input id="pumpingAmount" name="amount" type="number" step="5" min="0" max="1000" placeholder="למשל: 80" required />
+        </label>
+        <label>
+          אחסון
+          <select id="pumpingLocation" name="location">
+            <option value="fridge">❄️ מקרר</option>
+            <option value="freezer">🧊 מקפיא</option>
+          </select>
+        </label>
+        <button class="primary-button" type="submit">שמור שאיבה ✓</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>
