@@ -25,6 +25,30 @@ export const COLLECTION_CONFIG = {
   },
 };
 
+const TAB_FAB_CONFIG = Object.freeze({
+  home: Object.freeze({
+    visible: true,
+    label: "הוסף אירוע",
+    hint: "לחץ + להוספת אירוע מפורט",
+    action: "entry",
+    buttonText: "+",
+  }),
+  milestones: Object.freeze({
+    visible: true,
+    label: "הוסף אבן דרך",
+    hint: "לחץ + להוספת אבן דרך חדשה",
+    action: "milestone",
+    buttonText: "+",
+  }),
+  health: Object.freeze({
+    visible: true,
+    label: "פתח תפריט בריאות",
+    hint: "לחץ + להוספת אירוע בריאות",
+    action: "health-menu",
+    buttonText: "+",
+  }),
+});
+
 export function createEmptyState() {
   return {
     babyName: DEFAULT_BABY_NAME,
@@ -36,6 +60,21 @@ export function createEmptyState() {
     updatedAt: null,
     schemaVersion: SCHEMA_VERSION,
   };
+}
+
+export function getFabStateForTab(tabId) {
+  const config = TAB_FAB_CONFIG[tabId];
+  if (!config) {
+    return {
+      visible: false,
+      label: "",
+      hint: "",
+      action: "none",
+      buttonText: "+",
+    };
+  }
+
+  return { ...config };
 }
 
 export function safeDateMs(value, fallback = 0) {

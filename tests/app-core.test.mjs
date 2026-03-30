@@ -6,6 +6,7 @@ import {
   calcAge,
   calcSleepDuration,
   coalesceHistoryEntries,
+  getFabStateForTab,
   getFeedReminderState,
   getHistoryEmptyState,
   getVisibleEntries,
@@ -125,4 +126,38 @@ test("history entries do not coalesce poop and pee when caregiver differs", () =
 test("history empty state returns filter-specific copy", () => {
   assert.equal(getHistoryEmptyState("food", "היום"), "אין אירועי אוכל עבור היום.");
   assert.equal(getHistoryEmptyState("diaper", "אתמול"), "אין אירועי חיתולים עבור אתמול.");
+});
+
+test("FAB state is exposed per tab from a single source of truth", () => {
+  assert.deepEqual(getFabStateForTab("home"), {
+    visible: true,
+    label: "הוסף אירוע",
+    hint: "לחץ + להוספת אירוע מפורט",
+    action: "entry",
+    buttonText: "+",
+  });
+
+  assert.deepEqual(getFabStateForTab("milestones"), {
+    visible: true,
+    label: "הוסף אבן דרך",
+    hint: "לחץ + להוספת אבן דרך חדשה",
+    action: "milestone",
+    buttonText: "+",
+  });
+
+  assert.deepEqual(getFabStateForTab("health"), {
+    visible: true,
+    label: "פתח תפריט בריאות",
+    hint: "לחץ + להוספת אירוע בריאות",
+    action: "health-menu",
+    buttonText: "+",
+  });
+
+  assert.deepEqual(getFabStateForTab("timeline"), {
+    visible: false,
+    label: "",
+    hint: "",
+    action: "none",
+    buttonText: "+",
+  });
 });

@@ -25,6 +25,7 @@ import {
   formatDateHeader,
   formatDuration,
   getDayKey,
+  getFabStateForTab,
   getHistoryEmptyState,
   getFeedReminderState,
   getRecentEntries,
@@ -199,6 +200,7 @@ const el = {
   milestoneForm:     document.querySelector("#milestoneForm"),
   milestoneDate:     document.querySelector("#milestoneDate"),
   milestonesList:    document.querySelector("#milestonesList"),
+  openMilestoneSheet:document.querySelector("#openMilestoneSheet"),
 
   // Quick action buttons
   quickActions:      Array.from(document.querySelectorAll("[data-quick-type]")),
@@ -209,6 +211,7 @@ const el = {
 
   // FAB
   fabAdd:            document.querySelector("#fabAdd"),
+  fabHints:          Array.from(document.querySelectorAll("[data-fab-hint-for]")),
 
   // Bottom sheets
   sheetOverlay:        document.querySelector("#sheetOverlay"),
@@ -628,14 +631,17 @@ function registerEvents() {
 
   // ── FAB: open the correct sheet based on current tab ──
   el.fabAdd.addEventListener("click", () => {
-    if (currentTab === "milestones") {
+    const fabState = getFabStateForTab(currentTab);
+    if (fabState.action === "milestone") {
       openSheet("sheetMilestone");
-    } else if (currentTab === "health") {
+    } else if (fabState.action === "health-menu") {
       toggleHealthMenu();
-    } else {
+    } else if (fabState.action === "entry") {
       openEntrySheetForNew();
     }
   });
+
+  el.openMilestoneSheet?.addEventListener("click", () => openSheet("sheetMilestone"));
 
   // ── Sheet: close via overlay click ──
   el.sheetOverlay.addEventListener("click", () => closeAllSheets());
@@ -1151,6 +1157,10 @@ function getEntryWhoValue() {
 // TAB SWITCHING
 // ============================================================
 function switchTab(tabId) {
+  if (activeSheet || healthMenuOpen) {
+    closeAllSheets();
+  }
+
   currentTab = tabId;
 
   // Update tab views
@@ -1163,15 +1173,58 @@ function switchTab(tabId) {
     item.classList.toggle("active", item.dataset.navTab === tabId);
   }
 
-  const shouldShowFab = tabId === "home";
-  el.fabAdd?.classList.toggle("hidden", !shouldShowFab);
-  if (!shouldShowFab && healthMenuOpen) {
-    closeAllSheets();
-  }
+  applyFabState();
 }
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function setFabHintMarkup(hintEl, hintText) {
+  if (!hintEl) return;
+  if (!hintText) {
+    hintEl.textContent = "";
+    return;
+  }
+
+  const plusIndex = hintText.indexOf("+");
+  if (plusIndex === -1) {
+    hintEl.textContent = hintText;
+    return;
+  }
+
+  const before = hintText.slice(0, plusIndex);
+  const after = hintText.slice(plusIndex + 1);
+  hintEl.innerHTML = `${before}<strong>+</strong>${after}`;
+}
+
+function syncFabHints() {
+  for (const hintEl of el.fabHints) {
+    const tabId = hintEl.dataset.fabHintFor || "";
+    const fabState = getFabStateForTab(tabId);
+    setFabHintMarkup(hintEl, fabState.hint);
+  }
+}
+
+function applyFabState() {
+  const fabState = getFabStateForTab(currentTab);
+  if (!el.fabAdd) return fabState;
+
+  el.fabAdd.classList.toggle("hidden", !fabState.visible);
+  el.fabAdd.dataset.fabAction = fabState.action;
+
+  if (healthMenuOpen && fabState.action === "health-menu") {
+    el.fabAdd.classList.add("fab--menu-open");
+    el.fabAdd.textContent = "✕";
+    el.fabAdd.setAttribute("aria-label", "סגור תפריט בריאות");
+  } else {
+    el.fabAdd.classList.remove("fab--menu-open");
+    el.fabAdd.textContent = fabState.buttonText;
+    el.fabAdd.setAttribute("aria-label", fabState.label || "הוסף");
+  }
+
+  syncFabHints();
+  return fabState;
 }
 
 // ============================================================
@@ -1181,8 +1234,6 @@ function openSheet(sheetId) {
   // Close health menu if open
   if (healthMenuOpen) {
     el.fabHealthMenu?.classList.add("hidden");
-    el.fabAdd.classList.remove("fab--menu-open");
-    el.fabAdd.textContent = "+";
     healthMenuOpen = false;
   }
   // Close any sheet that's already open
@@ -1195,6 +1246,7 @@ function openSheet(sheetId) {
   sheet?.classList.add("open");
   el.sheetOverlay.classList.add("visible");
   document.body.style.overflow = "hidden"; // prevent body scroll behind sheet
+  applyFabState();
 }
 
 function closeAllSheets() {
@@ -1205,13 +1257,12 @@ function closeAllSheets() {
   }
   if (healthMenuOpen) {
     el.fabHealthMenu?.classList.add("hidden");
-    el.fabAdd.classList.remove("fab--menu-open");
-    el.fabAdd.textContent = "+";
     healthMenuOpen = false;
   }
   el.sheetOverlay.classList.remove("visible");
   document.body.style.overflow = "";
   _pendingPoopBtn = null;
+  applyFabState();
 }
 
 // ============================================================
@@ -1221,15 +1272,12 @@ function toggleHealthMenu() {
   healthMenuOpen = !healthMenuOpen;
   if (healthMenuOpen) {
     el.fabHealthMenu?.classList.remove("hidden");
-    el.fabAdd.classList.add("fab--menu-open");
-    el.fabAdd.textContent = "✕";
     el.sheetOverlay.classList.add("visible");
   } else {
     el.fabHealthMenu?.classList.add("hidden");
-    el.fabAdd.classList.remove("fab--menu-open");
-    el.fabAdd.textContent = "+";
     if (!activeSheet) el.sheetOverlay.classList.remove("visible");
   }
+  applyFabState();
 }
 
 async function logPoopChoice(includePee) {
