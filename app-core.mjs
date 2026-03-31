@@ -433,6 +433,39 @@ export function formatDuration(ms) {
   return `${minutes} דק׳`;
 }
 
+export function getMealClockState(entry, now = Date.now(), targetMs = 3 * 60 * 60 * 1000) {
+  if (!entry?.time) {
+    return {
+      hasMeal: false,
+      elapsedMs: 0,
+      remainingMs: targetMs,
+      progressRatio: 0,
+      status: "empty",
+      targetMs,
+    };
+  }
+
+  const elapsedMs = Math.max(0, now - safeDateMs(entry.time, now));
+  const remainingMs = Math.max(0, targetMs - elapsedMs);
+  const progressRatio = Math.min(1, elapsedMs / targetMs);
+
+  let status = "fresh";
+  if (elapsedMs >= targetMs) {
+    status = "due";
+  } else if (remainingMs <= 30 * 60 * 1000) {
+    status = "approaching";
+  }
+
+  return {
+    hasMeal: true,
+    elapsedMs,
+    remainingMs,
+    progressRatio,
+    status,
+    targetMs,
+  };
+}
+
 export function calcSleepDuration(entries) {
   const visibleEntries = getVisibleEntries(entries);
   const lastSleep = visibleEntries.find((entry) => entry.type === "sleep");

@@ -610,6 +610,115 @@ button,
   color: var(--muted);
 }
 
+.summary-card--meal-clock {
+  gap: 10px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 214, 153, 0.26), transparent 52%),
+    linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(255, 245, 232, 0.96));
+  border-color: rgba(232, 174, 93, 0.26);
+}
+
+[data-theme="dark"] .summary-card--meal-clock {
+  background:
+    radial-gradient(circle at top left, rgba(255, 173, 71, 0.18), transparent 52%),
+    linear-gradient(180deg, rgba(35, 31, 27, 0.98), rgba(30, 27, 24, 0.96));
+  border-color: rgba(232, 174, 93, 0.2);
+}
+
+.meal-clock__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.meal-clock__target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(232, 174, 93, 0.16);
+  color: #9c5e1d;
+  font-size: 0.73rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .meal-clock__target {
+  background: rgba(255, 173, 71, 0.18);
+  color: #ffcf94;
+}
+
+.meal-clock__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.meal-clock__countdown {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #9c5e1d;
+}
+
+[data-theme="dark"] .meal-clock__countdown {
+  color: #ffcf94;
+}
+
+.meal-clock__meter {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(232, 174, 93, 0.16);
+}
+
+[data-theme="dark"] .meal-clock__meter {
+  background: rgba(255, 173, 71, 0.14);
+}
+
+.meal-clock__meter-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f6c56d, #ef8b5c);
+  transition: width 220ms ease, background 220ms ease;
+}
+
+.summary-card--meal-clock[data-meal-status="approaching"] {
+  border-color: rgba(232, 144, 57, 0.42);
+  box-shadow: 0 12px 26px rgba(232, 144, 57, 0.12);
+}
+
+.summary-card--meal-clock[data-meal-status="approaching"] .meal-clock__countdown {
+  color: #b05d11;
+}
+
+.summary-card--meal-clock[data-meal-status="approaching"] .meal-clock__meter-fill {
+  background: linear-gradient(90deg, #f6b14f, #ee7e4b);
+}
+
+.summary-card--meal-clock[data-meal-status="due"] {
+  border-color: rgba(214, 103, 77, 0.42);
+  box-shadow: 0 12px 28px rgba(214, 103, 77, 0.14);
+}
+
+.summary-card--meal-clock[data-meal-status="due"] .meal-clock__countdown {
+  color: #b2402b;
+}
+
+.summary-card--meal-clock[data-meal-status="due"] .meal-clock__meter-fill {
+  background: linear-gradient(90deg, #f2885e, #d9544f);
+}
+
+[data-theme="dark"] .summary-card--meal-clock[data-meal-status="due"] .meal-clock__countdown {
+  color: #ff9b7d;
+}
+
 /* ============================================================
    STACK LIST
    ============================================================ */

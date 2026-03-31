@@ -9,6 +9,7 @@ import {
   getFabStateForTab,
   getFeedReminderState,
   getHistoryEmptyState,
+  getMealClockState,
   getVisibleEntries,
   normalizeCollectionItem,
   summarizeHistoryDay,
@@ -160,4 +161,20 @@ test("FAB state is exposed per tab from a single source of truth", () => {
     action: "none",
     buttonText: "+",
   });
+});
+
+test("meal clock tracks progress toward three hours and flags approaching state", () => {
+  const mealEntry = { id: "meal-1", time: "2026-03-31T08:00:00.000Z" };
+
+  const fresh = getMealClockState(mealEntry, Date.parse("2026-03-31T09:30:00.000Z"));
+  assert.equal(fresh.status, "fresh");
+  assert.equal(fresh.remainingMs, 90 * 60 * 1000);
+
+  const approaching = getMealClockState(mealEntry, Date.parse("2026-03-31T10:35:00.000Z"));
+  assert.equal(approaching.status, "approaching");
+  assert.equal(approaching.remainingMs, 25 * 60 * 1000);
+
+  const due = getMealClockState(mealEntry, Date.parse("2026-03-31T11:15:00.000Z"));
+  assert.equal(due.status, "due");
+  assert.equal(due.progressRatio, 1);
 });

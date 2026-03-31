@@ -27,6 +27,7 @@ import {
   getDayKey,
   getFabStateForTab,
   getHistoryEmptyState,
+  getMealClockState,
   getFeedReminderState,
   getRecentEntries,
   getVisibleEntries,
@@ -176,6 +177,9 @@ const el = {
   sleepDuration:     document.querySelector("#sleepDuration"),
   lastMealSummary:   document.querySelector("#lastMealSummary"),
   lastMealSince:     document.querySelector("#lastMealSince"),
+  lastMealCard:      document.querySelector("#lastMealCard"),
+  lastMealCountdown: document.querySelector("#lastMealCountdown"),
+  lastMealProgressFill: document.querySelector("#lastMealProgressFill"),
   latestEntrySummary:document.querySelector("#latestEntrySummary"),
   resetToday:        document.querySelector("#resetToday"),
 
@@ -1386,7 +1390,7 @@ function render() {
   // Find key events
   const latestWake  = todayEntries.find((e) => e.type === "wake");
   const latestSleep = todayEntries.find((e) => e.type === "sleep");
-  const latestMeal  = todayEntries.find((e) => e.type === "meal");
+  const latestMeal  = recentDailyEntries.find((e) => e.type === "meal");
   const latestEntry = todayEntries[0];
 
   // Wake
@@ -1409,8 +1413,7 @@ function render() {
   el.sleepDuration.textContent = calcSleepDuration(todayEntries);
 
   // Last meal
-  el.lastMealSummary.textContent = latestMeal ? formatTime(latestMeal.time) : "עדיין לא";
-  el.lastMealSince.textContent   = latestMeal ? timeSince(latestMeal.time)  : "";
+  updateLastMealCard(latestMeal);
 
   // Latest entry
   el.latestEntrySummary.textContent = latestEntry
@@ -2138,6 +2141,43 @@ function timeSince(value) {
   const mins  = minutes % 60;
   if (mins === 0) return `לפני ${hours} שע׳`;
   return `לפני ${hours}:${String(mins).padStart(2, "0")} שע׳`;
+}
+
+function updateLastMealCard(latestMeal) {
+  if (!el.lastMealSummary || !el.lastMealSince) return;
+
+  const mealClock = getMealClockState(latestMeal);
+
+  if (!mealClock.hasMeal || !latestMeal) {
+    el.lastMealSummary.textContent = "עדיין לא";
+    el.lastMealSince.textContent = "";
+    if (el.lastMealCountdown) el.lastMealCountdown.textContent = "אין ארוחה מתועדת עדיין";
+    if (el.lastMealProgressFill) el.lastMealProgressFill.style.width = "0%";
+    if (el.lastMealCard) el.lastMealCard.dataset.mealStatus = "empty";
+    return;
+  }
+
+  el.lastMealSummary.textContent = formatTime(latestMeal.time);
+  el.lastMealSince.textContent = `עברו ${formatDuration(mealClock.elapsedMs)}`;
+
+  if (el.lastMealCountdown) {
+    if (mealClock.status === "due") {
+      const overdueMs = Math.max(0, mealClock.elapsedMs - mealClock.targetMs);
+      el.lastMealCountdown.textContent = overdueMs > 0
+        ? `עברנו את היעד ב־${formatDuration(overdueMs)}`
+        : "הגענו ל־3 שעות";
+    } else {
+      el.lastMealCountdown.textContent = `עוד ${formatDuration(mealClock.remainingMs)} ל־3 שעות`;
+    }
+  }
+
+  if (el.lastMealProgressFill) {
+    el.lastMealProgressFill.style.width = `${Math.round(mealClock.progressRatio * 100)}%`;
+  }
+
+  if (el.lastMealCard) {
+    el.lastMealCard.dataset.mealStatus = mealClock.status;
+  }
 }
 
 function escapeHtml(value) {
