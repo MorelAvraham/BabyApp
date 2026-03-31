@@ -114,8 +114,22 @@
             <button id="resetToday" class="secondary-button" type="button">נקה היום</button>
           </div>
           <div class="summary-grid">
-            <article class="summary-card">
-              <span class="summary-card__label">☀️ התעורר</span>
+            <article class="summary-card summary-card--wide summary-card--meal-clock" id="lastMealCard" data-meal-status="empty">
+              <div class="meal-clock__header">
+                <span class="summary-card__label">🍼 ארוחה אחרונה</span>
+                <span class="meal-clock__target">יעד: 3 שעות</span>
+              </div>
+              <div class="meal-clock__headline">
+                <strong id="lastMealSummary">עדיין לא</strong>
+                <span class="meal-clock__countdown" id="lastMealCountdown">אין ארוחה מתועדת עדיין</span>
+              </div>
+              <div class="meal-clock__meter" aria-hidden="true">
+                <span class="meal-clock__meter-fill" id="lastMealProgressFill"></span>
+              </div>
+              <span class="summary-card__since" id="lastMealSince"></span>
+            </article>
+            <article class="summary-card summary-card--wide">
+              <span class="summary-card__label">☀️ זמן ערות</span>
               <strong id="wakeSummary">עדיין לא</strong>
               <span class="summary-card__since" id="wakeSince"></span>
             </article>
@@ -143,20 +157,6 @@
             <article class="summary-card summary-card--wide">
               <span class="summary-card__label">⏱ משך שינה אחרון</span>
               <strong id="sleepDuration">לא ידוע</strong>
-            </article>
-            <article class="summary-card summary-card--wide summary-card--meal-clock" id="lastMealCard" data-meal-status="empty">
-              <div class="meal-clock__header">
-                <span class="summary-card__label">🍼 ארוחה אחרונה</span>
-                <span class="meal-clock__target">יעד: 3 שעות</span>
-              </div>
-              <div class="meal-clock__headline">
-                <strong id="lastMealSummary">עדיין לא</strong>
-                <span class="meal-clock__countdown" id="lastMealCountdown">אין ארוחה מתועדת עדיין</span>
-              </div>
-              <div class="meal-clock__meter" aria-hidden="true">
-                <span class="meal-clock__meter-fill" id="lastMealProgressFill"></span>
-              </div>
-              <span class="summary-card__since" id="lastMealSince"></span>
             </article>
             <article class="summary-card summary-card--wide">
               <span class="summary-card__label">⏱ עדכון אחרון</span>
