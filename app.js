@@ -17,7 +17,6 @@ import {
   buildTimelineSegments,
   COLLECTION_CONFIG,
   SCHEMA_VERSION,
-  getAwakeWindowState,
   calcAge,
   calcSleepDuration,
   coalesceHistoryEntries,
@@ -29,6 +28,7 @@ import {
   getFabStateForTab,
   getHistoryEmptyState,
   getMealClockState,
+  getRestClockState,
   getFeedReminderState,
   getRecentEntries,
   getVisibleEntries,
@@ -178,6 +178,7 @@ const el = {
   medCount:          document.querySelector("#medCount"),
   sleepDuration:     document.querySelector("#sleepDuration"),
   awakeDurationCard: document.querySelector("#awakeDurationCard"),
+  awakeDurationLabel: document.querySelector("#awakeDurationLabel"),
   awakeDurationSummary: document.querySelector("#awakeDurationSummary"),
   awakeDurationSince: document.querySelector("#awakeDurationSince"),
   awakeDurationProgressFill: document.querySelector("#awakeDurationProgressFill"),
@@ -1418,10 +1419,10 @@ function render() {
   const latestSleep = recentDailyEntries.find((e) => e.type === "sleep");
   const latestMeal  = recentDailyEntries.find((e) => e.type === "meal");
   const latestEntry = recentDailyEntries[0];
-  const awakeWindow = getAwakeWindowState(recentDailyEntries);
+  const restClock = getRestClockState(recentDailyEntries);
 
-  // Awake duration card
-  updateAwakeDurationCard(awakeWindow);
+  // Awake/sleep duration card
+  updateAwakeDurationCard(restClock);
 
   // Wake time
   el.wakeSummary.textContent = latestWake ? formatTime(latestWake.time) : "עדיין לא";
@@ -2265,10 +2266,11 @@ function updateLastMealCard(latestMeal) {
   }
 }
 
-function updateAwakeDurationCard(awakeWindow) {
+function updateAwakeDurationCard(restClock) {
   if (!el.awakeDurationSummary || !el.awakeDurationSince) return;
 
-  if (!awakeWindow?.hasAwakeWindow) {
+  if (!restClock?.hasState) {
+    if (el.awakeDurationLabel) el.awakeDurationLabel.textContent = "☀️ זמן ערות";
     el.awakeDurationSummary.textContent = "לא ידוע";
     el.awakeDurationSince.textContent = "";
     if (el.awakeDurationProgressFill) el.awakeDurationProgressFill.style.width = "0%";
@@ -2277,17 +2279,18 @@ function updateAwakeDurationCard(awakeWindow) {
   }
 
   const timelineCapMs = 4 * 60 * 60 * 1000;
-  const progressRatio = Math.min(1, awakeWindow.durationMs / timelineCapMs);
+  const progressRatio = Math.min(1, restClock.durationMs / timelineCapMs);
 
-  el.awakeDurationSummary.textContent = formatDuration(awakeWindow.durationMs);
-  el.awakeDurationSince.textContent = awakeWindow.context || "";
+  if (el.awakeDurationLabel) el.awakeDurationLabel.textContent = restClock.title;
+  el.awakeDurationSummary.textContent = formatDuration(restClock.durationMs);
+  el.awakeDurationSince.textContent = restClock.context || "";
 
   if (el.awakeDurationProgressFill) {
     el.awakeDurationProgressFill.style.width = `${Math.round(progressRatio * 100)}%`;
   }
 
   if (el.awakeDurationCard) {
-    el.awakeDurationCard.dataset.awakeStatus = awakeWindow.status || "unknown";
+    el.awakeDurationCard.dataset.awakeStatus = restClock.status || "unknown";
   }
 }
 

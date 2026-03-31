@@ -509,6 +509,43 @@ export function getAwakeWindowState(entries, now = Date.now()) {
   };
 }
 
+export function getRestClockState(entries, now = Date.now()) {
+  const visibleEntries = getVisibleEntries(entries);
+  const lastWake = visibleEntries.find((entry) => entry.type === "wake");
+  const lastSleep = visibleEntries.find((entry) => entry.type === "sleep");
+
+  if (!lastWake && !lastSleep) {
+    return {
+      hasState: false,
+      status: "unknown",
+      title: "☀️ זמן ערות",
+      durationMs: 0,
+      context: "",
+    };
+  }
+
+  const wakeMs = lastWake ? safeDateMs(lastWake.time, Number.NaN) : Number.NaN;
+  const sleepMs = lastSleep ? safeDateMs(lastSleep.time, Number.NaN) : Number.NaN;
+
+  if (!Number.isFinite(sleepMs) || (Number.isFinite(wakeMs) && wakeMs > sleepMs)) {
+    return {
+      hasState: Number.isFinite(wakeMs),
+      status: "awake",
+      title: "☀️ זמן ערות",
+      durationMs: Number.isFinite(wakeMs) ? Math.max(0, now - wakeMs) : 0,
+      context: "מאז שהתעורר",
+    };
+  }
+
+  return {
+    hasState: Number.isFinite(sleepMs),
+    status: "asleep",
+    title: "🌙 זמן שינה",
+    durationMs: Number.isFinite(sleepMs) ? Math.max(0, now - sleepMs) : 0,
+    context: "מאז שנרדם",
+  };
+}
+
 export function calcSleepDuration(entries) {
   const visibleEntries = getVisibleEntries(entries);
   const lastSleep = visibleEntries.find((entry) => entry.type === "sleep");

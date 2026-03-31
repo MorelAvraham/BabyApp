@@ -11,6 +11,7 @@ import {
   getFeedReminderState,
   getHistoryEmptyState,
   getMealClockState,
+  getRestClockState,
   getVisibleEntries,
   normalizeCollectionItem,
   summarizeHistoryDay,
@@ -198,4 +199,26 @@ test("awake window reports current awake time or the last awake stretch before s
   assert.equal(asleep.status, "asleep");
   assert.equal(asleep.context, "לפני שנרדם");
   assert.equal(asleep.durationMs, 195 * 60 * 1000);
+});
+
+test("rest clock switches between awake and sleep modes", () => {
+  const awake = getRestClockState([
+    { id: "wake-1", type: "wake", time: "2026-03-31T08:00:00.000Z", deletedAt: null },
+    { id: "sleep-1", type: "sleep", time: "2026-03-31T06:00:00.000Z", deletedAt: null },
+  ], Date.parse("2026-03-31T09:15:00.000Z"));
+
+  assert.equal(awake.status, "awake");
+  assert.equal(awake.title, "☀️ זמן ערות");
+  assert.equal(awake.context, "מאז שהתעורר");
+  assert.equal(awake.durationMs, 75 * 60 * 1000);
+
+  const asleep = getRestClockState([
+    { id: "sleep-2", type: "sleep", time: "2026-03-31T10:00:00.000Z", deletedAt: null },
+    { id: "wake-2", type: "wake", time: "2026-03-31T07:00:00.000Z", deletedAt: null },
+  ], Date.parse("2026-03-31T11:45:00.000Z"));
+
+  assert.equal(asleep.status, "asleep");
+  assert.equal(asleep.title, "🌙 זמן שינה");
+  assert.equal(asleep.context, "מאז שנרדם");
+  assert.equal(asleep.durationMs, 105 * 60 * 1000);
 });
