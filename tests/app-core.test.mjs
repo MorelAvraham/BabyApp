@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildTimelineSegments,
+  getAwakeWindowState,
   calcAge,
   calcSleepDuration,
   coalesceHistoryEntries,
@@ -177,4 +178,24 @@ test("meal clock tracks progress toward three hours and flags approaching state"
   const due = getMealClockState(mealEntry, Date.parse("2026-03-31T11:15:00.000Z"));
   assert.equal(due.status, "due");
   assert.equal(due.progressRatio, 1);
+});
+
+test("awake window reports current awake time or the last awake stretch before sleep", () => {
+  const awake = getAwakeWindowState([
+    { id: "wake-1", type: "wake", time: "2026-03-31T08:00:00.000Z", deletedAt: null },
+    { id: "sleep-1", type: "sleep", time: "2026-03-31T06:00:00.000Z", deletedAt: null },
+  ], Date.parse("2026-03-31T09:30:00.000Z"));
+
+  assert.equal(awake.status, "awake");
+  assert.equal(awake.context, "מאז שהתעורר");
+  assert.equal(awake.durationMs, 90 * 60 * 1000);
+
+  const asleep = getAwakeWindowState([
+    { id: "sleep-2", type: "sleep", time: "2026-03-31T10:15:00.000Z", deletedAt: null },
+    { id: "wake-2", type: "wake", time: "2026-03-31T07:00:00.000Z", deletedAt: null },
+  ], Date.parse("2026-03-31T11:00:00.000Z"));
+
+  assert.equal(asleep.status, "asleep");
+  assert.equal(asleep.context, "לפני שנרדם");
+  assert.equal(asleep.durationMs, 195 * 60 * 1000);
 });

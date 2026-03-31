@@ -17,6 +17,7 @@ import {
   buildTimelineSegments,
   COLLECTION_CONFIG,
   SCHEMA_VERSION,
+  getAwakeWindowState,
   calcAge,
   calcSleepDuration,
   coalesceHistoryEntries,
@@ -116,6 +117,7 @@ let currentTab     = "home";   // "home" | "timeline" | "milestones" | "health"
 let healthMenuOpen = false;    // tracks health FAB speed-dial state
 let activeSheet    = null;     // id of the currently open bottom sheet, or null
 let editingEntryId = null;     // non-null when editing an existing entry
+let editingEntryGroupIds = null;
 let _pendingPoopBtn = null;
 let timelineBarSelection = null;
 let currentTimelineFilter = "all";
@@ -175,6 +177,10 @@ const el = {
   peeCount:          document.querySelector("#peeCount"),
   medCount:          document.querySelector("#medCount"),
   sleepDuration:     document.querySelector("#sleepDuration"),
+  awakeDurationCard: document.querySelector("#awakeDurationCard"),
+  awakeDurationSummary: document.querySelector("#awakeDurationSummary"),
+  awakeDurationSince: document.querySelector("#awakeDurationSince"),
+  awakeDurationProgressFill: document.querySelector("#awakeDurationProgressFill"),
   lastMealSummary:   document.querySelector("#lastMealSummary"),
   lastMealSince:     document.querySelector("#lastMealSince"),
   lastMealCard:      document.querySelector("#lastMealCard"),
@@ -186,6 +192,7 @@ const el = {
   // Entry form
   dailyForm:         document.querySelector("#dailyForm"),
   entryType:         document.querySelector("#entryType"),
+  entryTypePoopPee:  document.querySelector("#entryTypePoopPee"),
   entryTime:         document.querySelector("#entryTime"),
   entryDetails:      document.querySelector("#entryDetails"),
   entryWhoSelect:    document.querySelector("#entryWhoSelect"),
@@ -670,6 +677,7 @@ function registerEvents() {
 
     const isMeal = el.entryType.value === "meal";
     const isTasting = el.entryType.value === "tasting";
+    const isDiaperCombo = el.entryType.value === "poop-pee";
     const whoValue = getEntryWhoValue();
 
     if (!whoValue) {
@@ -695,7 +703,11 @@ function registerEvents() {
       rating:   selectedRating,
     };
 
-    if (editingEntryId) {
+    if (editingEntryGroupIds?.length) {
+      await saveDiaperComboRecords(payload, editingEntryGroupIds);
+      editingEntryGroupIds = null;
+      editingEntryId = null;
+    } else if (editingEntryId) {
       // Update existing entry in place
       const idx = state.dailyEntries.findIndex((e) => e.id === editingEntryId);
       if (idx !== -1) {
@@ -708,6 +720,8 @@ function registerEvents() {
         await persistRecord("dailyEntries", nextRecord);
       }
       editingEntryId = null;
+    } else if (isDiaperCombo) {
+      await saveDiaperComboRecords(payload);
     } else {
       // Add new entry
       const nextRecord = normalizeCollectionItem("dailyEntries", {
@@ -901,10 +915,18 @@ function registerEvents() {
   // ── Delete / Edit entry via buttons (event delegation) ──
   el.timeline.addEventListener("click", async (event) => {
     // Edit
-    const editBtn = event.target.closest("[data-edit-id]");
+    const editBtn = event.target.closest("[data-edit-id], [data-edit-ids]");
     if (editBtn) {
-      const entry = state.dailyEntries.find((e) => e.id === editBtn.dataset.editId);
-      if (entry) openEntrySheetForEdit(entry);
+      if (editBtn.dataset.editIds) {
+        const groupIds = editBtn.dataset.editIds.split(",").filter(Boolean);
+        const groupEntries = groupIds
+          .map((id) => state.dailyEntries.find((entry) => entry.id === id))
+          .filter(Boolean);
+        if (groupEntries.length) openEntrySheetForEdit(groupEntries[0], { groupedEntryIds: groupIds });
+      } else {
+        const entry = state.dailyEntries.find((e) => e.id === editBtn.dataset.editId);
+        if (entry) openEntrySheetForEdit(entry);
+      }
       return;
     }
     // Delete
@@ -1068,6 +1090,7 @@ function registerEvents() {
 // ============================================================
 function openEntrySheetForNew(preselectedType = null) {
   editingEntryId = null;
+  editingEntryGroupIds = null;
   el.sheetEntryTitle.textContent = "הוספת אירוע";
   el.entrySubmitBtn.textContent  = "שמור אירוע ✓";
   el.dailyForm.reset();
@@ -1083,12 +1106,15 @@ function openEntrySheetForNew(preselectedType = null) {
   openSheet("sheetEntry");
 }
 
-function openEntrySheetForEdit(entry) {
+function openEntrySheetForEdit(entry, options = {}) {
+  const groupedEntryIds = Array.isArray(options.groupedEntryIds) ? options.groupedEntryIds : null;
   editingEntryId = entry.id;
-  el.sheetEntryTitle.textContent = "עריכת אירוע ✏️";
+  editingEntryGroupIds = groupedEntryIds;
+  setPoopPeeOptionEnabled(Boolean(groupedEntryIds?.length));
+  el.sheetEntryTitle.textContent = groupedEntryIds?.length ? "עריכת קקי ופיפי ✏️" : "עריכת אירוע ✏️";
   el.entrySubmitBtn.textContent  = "עדכן אירוע ✓";
 
-  el.entryType.value    = entry.type;
+  el.entryType.value    = groupedEntryIds?.length ? "poop-pee" : entry.type;
   el.entryTime.value    = toLocalDateTime(new Date(entry.time));
   el.entryDetails.value = entry.details || "";
   setEntryWhoValue(entry.who || currentWho);
@@ -1388,12 +1414,16 @@ function render() {
   const todayEntries = recentDailyEntries.filter((entry) => getDayKey(entry.time) === todayKey);
 
   // Find key events
-  const latestWake  = todayEntries.find((e) => e.type === "wake");
-  const latestSleep = todayEntries.find((e) => e.type === "sleep");
+  const latestWake  = recentDailyEntries.find((e) => e.type === "wake");
+  const latestSleep = recentDailyEntries.find((e) => e.type === "sleep");
   const latestMeal  = recentDailyEntries.find((e) => e.type === "meal");
-  const latestEntry = todayEntries[0];
+  const latestEntry = recentDailyEntries[0];
+  const awakeWindow = getAwakeWindowState(recentDailyEntries);
 
-  // Wake
+  // Awake duration card
+  updateAwakeDurationCard(awakeWindow);
+
+  // Wake time
   el.wakeSummary.textContent = latestWake ? formatTime(latestWake.time) : "עדיין לא";
   el.wakeSince.textContent   = latestWake ? timeSince(latestWake.time)  : "";
 
@@ -1410,7 +1440,7 @@ function render() {
   }
 
   // Sleep duration — time between the last sleep event and the most recent wake event
-  el.sleepDuration.textContent = calcSleepDuration(todayEntries);
+  el.sleepDuration.textContent = calcSleepDuration(recentDailyEntries);
 
   // Last meal
   updateLastMealCard(latestMeal);
@@ -1609,7 +1639,8 @@ function renderTimeline(allEntries, selectedDateKey) {
         ? `${EMOJI.poop}${EMOJI.pee} קקי + פיפי`
         : `${EMOJI[entry.type] ?? "?"} ${LABELS[entry.type] ?? entry.type}`;
       const editButtonHtml = entry.groupedEntryIds
-        ? ""
+        ? `<button class="edit-btn" data-edit-ids="${escapeHtml(entry.groupedEntryIds.join(","))}"
+                          type="button" aria-label="ערוך">✏️</button>`
         : `<button class="edit-btn" data-edit-id="${escapeHtml(entry.id)}"
                           type="button" aria-label="ערוך">✏️</button>`;
       const deleteButtonAttr = entry.groupedEntryIds
@@ -2089,6 +2120,7 @@ function updateThemeToggle() {
 // ============================================================
 function setDefaultFormValues() {
   editingEntryId = null;
+  editingEntryGroupIds = null;
   el.entryTime.value = toLocalDateTime(new Date());
   setEntryWhoValue(currentWho);
   if (el.milestoneDate)   el.milestoneDate.value = toDateInputValue(new Date());
@@ -2103,6 +2135,7 @@ function setDefaultFormValues() {
   }
 
   for (const p of el.medPills) p.classList.remove("selected");
+  setPoopPeeOptionEnabled(false);
   if (el.sheetEntryTitle) el.sheetEntryTitle.textContent = "הוספת אירוע";
   if (el.entrySubmitBtn)  el.entrySubmitBtn.textContent  = "שמור אירוע ✓";
 }
@@ -2143,6 +2176,58 @@ function timeSince(value) {
   return `לפני ${hours}:${String(mins).padStart(2, "0")} שע׳`;
 }
 
+function setPoopPeeOptionEnabled(enabled) {
+  if (!el.entryTypePoopPee) return;
+  el.entryTypePoopPee.hidden = !enabled;
+  el.entryTypePoopPee.disabled = !enabled;
+}
+
+function getDiaperTypesForEntryType(type) {
+  return type === "poop-pee" ? ["poop", "pee"] : [type];
+}
+
+async function persistDiaperRecords(records) {
+  for (const record of records) {
+    replaceRecordInState("dailyEntries", record);
+    await persistRecord("dailyEntries", record);
+  }
+}
+
+async function saveDiaperComboRecords(payload, existingIds = []) {
+  const desiredTypes = getDiaperTypesForEntryType(payload.type);
+  const existingRecords = existingIds
+    .map((id) => state.dailyEntries.find((entry) => entry.id === id))
+    .filter(Boolean);
+
+  const recordsByType = new Map(existingRecords.map((record) => [record.type, record]));
+  const recordsToPersist = [];
+
+  for (const type of desiredTypes) {
+    const baseRecord = recordsByType.get(type) || existingRecords.find((record) => !desiredTypes.includes(record.type));
+    const nextRecord = normalizeCollectionItem("dailyEntries", {
+      ...(baseRecord || {}),
+      id: baseRecord?.id || crypto.randomUUID(),
+      type,
+      time: payload.time,
+      details: payload.details,
+      who: payload.who,
+      mlAmount: null,
+      rating: null,
+      updatedAt: new Date().toISOString(),
+    }, { deviceId });
+    recordsToPersist.push(nextRecord);
+  }
+
+  const desiredIds = new Set(recordsToPersist.map((record) => record.id));
+  const recordsToDelete = existingRecords.filter((record) => !desiredIds.has(record.id) && !record.deletedAt);
+
+  if (recordsToDelete.length) {
+    await Promise.all(recordsToDelete.map((record) => softDeleteRecord("dailyEntries", record)));
+  }
+
+  await persistDiaperRecords(recordsToPersist);
+}
+
 function updateLastMealCard(latestMeal) {
   if (!el.lastMealSummary || !el.lastMealSince) return;
 
@@ -2177,6 +2262,32 @@ function updateLastMealCard(latestMeal) {
 
   if (el.lastMealCard) {
     el.lastMealCard.dataset.mealStatus = mealClock.status;
+  }
+}
+
+function updateAwakeDurationCard(awakeWindow) {
+  if (!el.awakeDurationSummary || !el.awakeDurationSince) return;
+
+  if (!awakeWindow?.hasAwakeWindow) {
+    el.awakeDurationSummary.textContent = "לא ידוע";
+    el.awakeDurationSince.textContent = "";
+    if (el.awakeDurationProgressFill) el.awakeDurationProgressFill.style.width = "0%";
+    if (el.awakeDurationCard) el.awakeDurationCard.dataset.awakeStatus = "unknown";
+    return;
+  }
+
+  const timelineCapMs = 4 * 60 * 60 * 1000;
+  const progressRatio = Math.min(1, awakeWindow.durationMs / timelineCapMs);
+
+  el.awakeDurationSummary.textContent = formatDuration(awakeWindow.durationMs);
+  el.awakeDurationSince.textContent = awakeWindow.context || "";
+
+  if (el.awakeDurationProgressFill) {
+    el.awakeDurationProgressFill.style.width = `${Math.round(progressRatio * 100)}%`;
+  }
+
+  if (el.awakeDurationCard) {
+    el.awakeDurationCard.dataset.awakeStatus = awakeWindow.status || "unknown";
   }
 }
 

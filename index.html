@@ -128,8 +128,20 @@
               </div>
               <span class="summary-card__since" id="lastMealSince"></span>
             </article>
-            <article class="summary-card summary-card--wide">
-              <span class="summary-card__label">☀️ זמן ערות</span>
+            <article class="summary-card summary-card--wide summary-card--awake-clock" id="awakeDurationCard" data-awake-status="unknown">
+              <div class="awake-clock__header">
+                <span class="summary-card__label">☀️ זמן ערות</span>
+              </div>
+              <div class="awake-clock__headline">
+                <strong id="awakeDurationSummary">לא ידוע</strong>
+              </div>
+              <div class="awake-clock__meter" aria-hidden="true">
+                <span class="awake-clock__meter-fill" id="awakeDurationProgressFill"></span>
+              </div>
+              <span class="summary-card__since" id="awakeDurationSince"></span>
+            </article>
+            <article class="summary-card">
+              <span class="summary-card__label">☀️ התעורר</span>
               <strong id="wakeSummary">עדיין לא</strong>
               <span class="summary-card__since" id="wakeSince"></span>
             </article>
@@ -353,6 +365,7 @@
             <option value="meal">🍼 אכל</option>
             <option value="poop">💩 קקי</option>
             <option value="pee">💦 פיפי</option>
+            <option value="poop-pee" id="entryTypePoopPee" hidden>💩💦 קקי + פיפי</option>
             <option value="medication">💊 תרופה/ויטמין</option>
             <option value="tasting">🥦 טעימה</option>
           </select>

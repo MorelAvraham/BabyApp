@@ -466,6 +466,49 @@ export function getMealClockState(entry, now = Date.now(), targetMs = 3 * 60 * 6
   };
 }
 
+export function getAwakeWindowState(entries, now = Date.now()) {
+  const visibleEntries = getVisibleEntries(entries);
+  const lastWake = visibleEntries.find((entry) => entry.type === "wake");
+  const lastSleep = visibleEntries.find((entry) => entry.type === "sleep");
+
+  if (!lastWake) {
+    return {
+      hasAwakeWindow: false,
+      durationMs: 0,
+      status: "unknown",
+      context: "",
+    };
+  }
+
+  const wakeMs = safeDateMs(lastWake.time, Number.NaN);
+  if (!Number.isFinite(wakeMs)) {
+    return {
+      hasAwakeWindow: false,
+      durationMs: 0,
+      status: "unknown",
+      context: "",
+    };
+  }
+
+  const sleepMs = lastSleep ? safeDateMs(lastSleep.time, Number.NaN) : Number.NaN;
+
+  if (!Number.isFinite(sleepMs) || wakeMs > sleepMs) {
+    return {
+      hasAwakeWindow: true,
+      durationMs: Math.max(0, now - wakeMs),
+      status: "awake",
+      context: "מאז שהתעורר",
+    };
+  }
+
+  return {
+    hasAwakeWindow: true,
+    durationMs: Math.max(0, sleepMs - wakeMs),
+    status: "asleep",
+    context: "לפני שנרדם",
+  };
+}
+
 export function calcSleepDuration(entries) {
   const visibleEntries = getVisibleEntries(entries);
   const lastSleep = visibleEntries.find((entry) => entry.type === "sleep");

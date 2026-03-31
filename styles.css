@@ -719,6 +719,58 @@ button,
   color: #ff9b7d;
 }
 
+.summary-card--awake-clock {
+  gap: 10px;
+  background:
+    radial-gradient(circle at top left, rgba(165, 219, 255, 0.28), transparent 54%),
+    linear-gradient(180deg, rgba(244, 250, 255, 0.98), rgba(235, 246, 255, 0.96));
+  border-color: rgba(96, 168, 228, 0.26);
+}
+
+[data-theme="dark"] .summary-card--awake-clock {
+  background:
+    radial-gradient(circle at top left, rgba(97, 191, 255, 0.16), transparent 54%),
+    linear-gradient(180deg, rgba(26, 33, 41, 0.98), rgba(23, 29, 36, 0.96));
+  border-color: rgba(96, 168, 228, 0.2);
+}
+
+.awake-clock__header,
+.awake-clock__headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.awake-clock__meter {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(96, 168, 228, 0.16);
+}
+
+[data-theme="dark"] .awake-clock__meter {
+  background: rgba(97, 191, 255, 0.14);
+}
+
+.awake-clock__meter-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8fd2ff, #58a9e8);
+  transition: width 220ms ease, background 220ms ease;
+}
+
+.summary-card--awake-clock[data-awake-status="awake"] .awake-clock__meter-fill {
+  background: linear-gradient(90deg, #90d9ff, #48b1f0);
+}
+
+.summary-card--awake-clock[data-awake-status="asleep"] .awake-clock__meter-fill {
+  background: linear-gradient(90deg, #83c8f7, #7896e9);
+}
+
 /* ============================================================
    STACK LIST
    ============================================================ */
