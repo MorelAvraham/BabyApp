@@ -279,6 +279,17 @@
             </div>
             <button id="openGenericTastingEntry" class="secondary-button" type="button">+ טעימה חופשית</button>
           </div>
+          <div class="tasting-toolbar">
+            <label class="tasting-search">
+              <input id="tastingSearchInput" type="search" placeholder="חפש מאכל..." />
+            </label>
+            <div id="tastingFilterChips" class="tasting-filter-chips" role="tablist" aria-label="סינון צ'קליסט טעימות">
+              <button class="timeline-filter-chip active" data-tasting-filter="all" type="button">הכל</button>
+              <button class="timeline-filter-chip" data-tasting-filter="pending" type="button">עוד לא</button>
+              <button class="timeline-filter-chip" data-tasting-filter="allergens" type="button">אלרגנים</button>
+              <button class="timeline-filter-chip" data-tasting-filter="done" type="button">הושלמו</button>
+            </div>
+          </div>
           <div id="tastingChecklistGroups" class="tasting-groups"></div>
         </section>
 

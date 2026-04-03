@@ -233,6 +233,8 @@ let entrySubmitTargetTab = "timeline";
 let _pendingPoopBtn = null;
 let timelineBarSelection = null;
 let currentTimelineFilter = "all";
+let currentTastingFilter = "all";
+let currentTastingSearch = "";
 let db             = null;
 let metaDoc        = null;
 let legacyStateDoc = null;
@@ -326,6 +328,8 @@ const el = {
   tastingOverview: document.querySelector("#tastingOverview"),
   tastingChecklistGroups: document.querySelector("#tastingChecklistGroups"),
   openGenericTastingEntry: document.querySelector("#openGenericTastingEntry"),
+  tastingSearchInput: document.querySelector("#tastingSearchInput"),
+  tastingFilterChips: Array.from(document.querySelectorAll("[data-tasting-filter]")),
 
   // Milestone form
   milestoneForm:     document.querySelector("#milestoneForm"),
@@ -780,6 +784,18 @@ function registerEvents() {
   el.openGenericTastingEntry?.addEventListener("click", () => {
     openEntrySheetForNew("tasting", { submitTargetTab: "tastings" });
   });
+
+  el.tastingSearchInput?.addEventListener("input", () => {
+    currentTastingSearch = el.tastingSearchInput.value.trim();
+    renderTastingChecklist();
+  });
+
+  for (const chip of el.tastingFilterChips) {
+    chip.addEventListener("click", () => {
+      currentTastingFilter = chip.dataset.tastingFilter || "all";
+      renderTastingChecklist();
+    });
+  }
 
   // ── Sheet: close via overlay click ──
   el.sheetOverlay.addEventListener("click", () => closeAllSheets());
@@ -1896,8 +1912,8 @@ function renderTastingChecklist() {
   if (el.tastingOverview) {
     const overviewChips = [
       { label: "נטעמו", value: `${summary.tastedCount}` },
-      { label: "אלרגנים שנבדקו", value: `${summary.allergenTastedCount}` },
-      { label: "טעימה אחרונה", value: summary.lastTastingLabel || "עדיין אין" },
+      { label: "אלרגנים הושלמו", value: `${summary.allergenCompletedCount}` },
+      { label: "בתהליך 3 ימים", value: `${summary.allergenInProgressCount}` },
     ];
 
     el.tastingOverview.innerHTML = overviewChips.map((chip) => `
@@ -1908,33 +1924,53 @@ function renderTastingChecklist() {
     `).join("");
   }
 
-  el.tastingChecklistGroups.innerHTML = summary.groups.map((group) => `
+  for (const chip of el.tastingFilterChips) {
+    chip.classList.toggle("active", chip.dataset.tastingFilter === currentTastingFilter);
+  }
+
+  if (el.tastingSearchInput && el.tastingSearchInput.value !== currentTastingSearch) {
+    el.tastingSearchInput.value = currentTastingSearch;
+  }
+
+  if (!summary.visibleGroups.length) {
+    el.tastingChecklistGroups.innerHTML = `
+      <div class="empty-state">לא נמצאו פריטים שמתאימים לחיפוש או לסינון שבחרת.</div>
+    `;
+    return;
+  }
+
+  el.tastingChecklistGroups.innerHTML = summary.visibleGroups.map((group) => `
     <section class="tasting-group">
       <div class="tasting-group__header">
         <div>
           <p class="panel-kicker">${escapeHtml(group.kicker)}</p>
           <h3>${escapeHtml(group.title)}</h3>
         </div>
-        <span class="tasting-group__counter">${group.tastedCount}/${group.totalCount}</span>
+        <span class="tasting-group__counter">${group.visibleCount}/${group.totalCount}</span>
       </div>
       <div class="tasting-list">
-        ${group.items.map((item) => {
-          const statusClass = item.matchedEntry ? "is-tasted" : "is-pending";
-          const actionLabel = item.matchedEntry ? "עוד טעימה" : "סמן טעימה";
-          const ratingEmoji = item.matchedEntry?.rating ? (TASTING_RATING_EMOJIS[item.matchedEntry.rating] || "") : "";
+        ${group.visibleItems.map((item) => {
+          const statusClass = item.matchedEntries.length ? "is-tasted" : "is-pending";
+          const actionLabel = item.matchedEntries.length ? "עוד טעימה" : "סמן טעימה";
+          const latestRating = item.latestEntry?.rating ? (TASTING_RATING_EMOJIS[item.latestEntry.rating] || "") : "";
           const metaParts = [];
+          const allergenLabel = getAllergenProgressLabel(item);
 
-          if (item.isAllergen) metaParts.push("אלרגן");
-          if (item.matchedEntry?.time) metaParts.push(`נטעם ${timeSince(item.matchedEntry.time)}`);
-          if (ratingEmoji) metaParts.push(`תגובה ${ratingEmoji}`);
+          if (item.isAllergen) {
+            metaParts.push(allergenLabel.meta);
+          } else if (item.matchedEntries.length) {
+            metaParts.push("סומן בצ'קליסט");
+          }
+
+          if (latestRating) metaParts.push(`תגובה ${latestRating}`);
 
           return `
             <button class="tasting-item ${statusClass}" type="button" data-open-tasting-item="${escapeHtml(item.label)}">
-              <span class="tasting-item__status" aria-hidden="true">${item.matchedEntry ? "✓" : "+"}</span>
+              <span class="tasting-item__status" aria-hidden="true">${item.matchedEntries.length ? "✓" : "+"}</span>
               <span class="tasting-item__body">
                 <span class="tasting-item__title-row">
                   <strong>${escapeHtml(item.label)}</strong>
-                  ${item.isAllergen ? '<span class="tasting-item__pill">אלרגן</span>' : ""}
+                  ${item.isAllergen ? `<span class="tasting-item__pill tasting-item__pill--allergen">${escapeHtml(allergenLabel.pill)}</span>` : ""}
                 </span>
                 <span class="tasting-item__meta">${escapeHtml(metaParts.join(" · ") || "עדיין לא תועד")}</span>
               </span>
@@ -1977,14 +2013,20 @@ function getTastingChecklistSummary() {
 
   const groups = TASTING_CHECKLIST_INDEX.map((group) => {
     const items = group.items.map((item) => {
-      const matchedEntry = tastingEntries.find((entry) => {
+      const matchedEntries = tastingEntries.filter((entry) => {
         const normalizedDetails = normalizeTastingText(entry.details);
         return item.normalizedAliases.some((alias) => alias && normalizedDetails.includes(alias));
-      }) || null;
+      });
+      const sortedEntries = matchedEntries
+        .slice()
+        .sort((a, b) => safeDateMs(b.time, 0) - safeDateMs(a.time, 0));
+      const allergenDayStreak = item.isAllergen ? getConsecutiveDayStreak(sortedEntries) : 0;
 
       return {
         ...item,
-        matchedEntry,
+        matchedEntries: sortedEntries,
+        latestEntry: sortedEntries[0] || null,
+        allergenDayStreak,
       };
     });
 
@@ -1992,25 +2034,74 @@ function getTastingChecklistSummary() {
       ...group,
       items,
       totalCount: items.length,
-      tastedCount: items.filter((item) => item.matchedEntry).length,
+      tastedCount: items.filter((item) => item.matchedEntries.length).length,
     };
   });
 
   const flatItems = groups.flatMap((group) => group.items);
-  const tastedItems = flatItems.filter((item) => item.matchedEntry);
-  const lastTastingItem = tastedItems
-    .slice()
-    .sort((a, b) => safeDateMs(b.matchedEntry?.time, 0) - safeDateMs(a.matchedEntry?.time, 0))[0] || null;
+  const tastedItems = flatItems.filter((item) => item.matchedEntries.length);
+  const allergenItems = flatItems.filter((item) => item.isAllergen);
+  const allergenCompletedCount = allergenItems.filter((item) => item.allergenDayStreak >= 3).length;
+  const allergenInProgressCount = allergenItems.filter((item) => item.allergenDayStreak > 0 && item.allergenDayStreak < 3).length;
+  const visibleGroups = groups
+    .map((group) => {
+      const visibleItems = group.items.filter((item) => matchesTastingFilter(item) && matchesTastingSearch(item));
+      return {
+        ...group,
+        visibleItems,
+        visibleCount: visibleItems.length,
+      };
+    })
+    .filter((group) => group.visibleItems.length);
 
   return {
     groups,
+    visibleGroups,
     totalCount: flatItems.length,
     tastedCount: tastedItems.length,
     allergenTastedCount: tastedItems.filter((item) => item.isAllergen).length,
+    allergenCompletedCount,
+    allergenInProgressCount,
     progress: flatItems.length ? tastedItems.length / flatItems.length : 0,
-    lastTastingLabel: lastTastingItem?.matchedEntry
-      ? `${lastTastingItem.label} · ${formatTime(lastTastingItem.matchedEntry.time)}`
-      : "",
+  };
+}
+
+function matchesTastingFilter(item) {
+  if (currentTastingFilter === "pending") return !item.matchedEntries.length;
+  if (currentTastingFilter === "allergens") return item.isAllergen;
+  if (currentTastingFilter === "done") {
+    if (item.isAllergen) return item.allergenDayStreak >= 3;
+    return item.matchedEntries.length > 0;
+  }
+  return true;
+}
+
+function matchesTastingSearch(item) {
+  if (!currentTastingSearch) return true;
+  const normalizedSearch = normalizeTastingText(currentTastingSearch);
+  if (!normalizedSearch) return true;
+  return item.normalizedAliases.some((alias) => alias.includes(normalizedSearch));
+}
+
+function getAllergenProgressLabel(item) {
+  const streak = Math.min(3, item.allergenDayStreak || 0);
+  if (streak >= 3) {
+    return {
+      pill: "אלרגן 3/3",
+      meta: "בדיקת 3 ימים הושלמה",
+    };
+  }
+
+  if (streak > 0) {
+    return {
+      pill: `אלרגן ${streak}/3`,
+      meta: `ברצף ${streak}/3 ימים`,
+    };
+  }
+
+  return {
+    pill: "אלרגן 0/3",
+    meta: "צריך 3 ימים ברצף",
   };
 }
 
@@ -2566,6 +2657,27 @@ function normalizeTastingText(value) {
     .toLowerCase()
     .replace(/[׳״"'`]/g, "")
     .replace(/[^a-z0-9\u0590-\u05ff]+/gi, "");
+}
+
+function getConsecutiveDayStreak(entries) {
+  const dayKeys = [...new Set(entries.map((entry) => entry.dayKey || getDayKey(entry.time)).filter(Boolean))]
+    .sort((a, b) => safeDateMs(`${b}T00:00:00`, 0) - safeDateMs(`${a}T00:00:00`, 0));
+
+  if (!dayKeys.length) return 0;
+
+  let streak = 1;
+  for (let index = 1; index < dayKeys.length; index += 1) {
+    const previous = safeDateMs(`${dayKeys[index - 1]}T00:00:00`, 0);
+    const current = safeDateMs(`${dayKeys[index]}T00:00:00`, 0);
+    const diffDays = Math.round((previous - current) / (24 * 60 * 60 * 1000));
+    if (diffDays === 1) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
 }
 
 // ============================================================
