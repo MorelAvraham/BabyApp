@@ -1946,7 +1946,7 @@ function renderTastingChecklist() {
           <p class="panel-kicker">${escapeHtml(group.kicker)}</p>
           <h3>${escapeHtml(group.title)}</h3>
         </div>
-        <span class="tasting-group__counter">${group.visibleCount}/${group.totalCount}</span>
+        <span class="tasting-group__counter">${group.tastedCount}/${group.totalCount}</span>
       </div>
       <div class="tasting-list">
         ${group.visibleItems.map((item) => {
