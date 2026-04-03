@@ -109,15 +109,127 @@ const WHO_LABELS = {
   lulit: "לולית"
 };
 
+const TASTING_RATING_EMOJIS = {
+  1: "🤮",
+  2: "😒",
+  3: "😐",
+  4: "🙂",
+  5: "😍",
+};
+
+const TASTING_CHECKLIST_GROUPS = Object.freeze([
+  {
+    id: "vegetables",
+    title: "ירקות",
+    kicker: "מומלץ להתחיל כאן",
+    items: [
+      "עגבניה", "קישוא", "מלפפון", "דלעת", "חסה", "גזר", "פטרוזיליה", "בטטה",
+      "כוסברה", "תפוח אדמה", "בצל ירוק", "דלורית", "שום", "בצל", "מנגולד", "סלק",
+      "תרד", "חציל", "קולורבי", "פלפל", "אפונה ירוקה", "כרובית", "ברוקולי", "כרוב",
+      "שעועית ירוקה", "פטריות", "תירס",
+    ],
+  },
+  {
+    id: "fruits",
+    title: "פירות",
+    kicker: "מאודים וטריים",
+    items: [
+      "תפוז", "תפוח", "קלמנטינה", "אגס", "אשכולית צהובה", "בננה", "אשכולית אדומה", "אבוקדו",
+      "פומלה", "מלון", "ענבים", "אבטיח", "שסק", "משמש", "רימון", "תאנה", "תמר",
+      "אפרסמון", "גויבה", "פפאיה", "לימון",
+    ],
+  },
+  {
+    id: "grains",
+    title: "דגנים",
+    kicker: "להרחבת התפריט",
+    items: [
+      "אורז", "בורגול", "חיטה", "סולת", "קמח תירס", "קינואה",
+      { label: "כוסמת", isAllergen: true }, "שיבולת שועל",
+      "כוסמין", "דוחן",
+    ],
+  },
+  {
+    id: "protein",
+    title: "חלבון",
+    kicker: "אחרי שמתקדמים עם הטעימות",
+    items: [
+      "עוף", "הודו", "בקר",
+      { label: "דגים", aliases: ["דג"], isAllergen: true },
+      { label: "ביצים", aliases: ["ביצה", "חלמון ביצה"], isAllergen: true },
+      "טופו", "עדשים", "חומוס",
+      "שעועית", "אפונה", "פול", "מאש", "לוביה",
+    ],
+  },
+  {
+    id: "dairy",
+    title: "מוצרי חלב",
+    kicker: "בכמות קטנה",
+    items: [
+      "גבינה לבנה", "יוגורט", "קוטג׳", "לאבנה", "גבינת שמנת", "גבינה צהובה",
+      "ריקוטה", { label: "פטה / בולגרית", aliases: ["פטה", "בולגרית"] },
+    ],
+  },
+  {
+    id: "specialAllergens",
+    title: "פירות מיוחדים ורגישים",
+    kicker: "לתת בזהירות ובהדרגה",
+    items: [
+      { label: "שומשום", aliases: ["טחינה"], isAllergen: true },
+      { label: "סויה", isAllergen: true },
+      { label: "קיווי", isAllergen: true },
+      { label: "אננס", isAllergen: true },
+      { label: "תות", isAllergen: true },
+      { label: "מנגו", isAllergen: true },
+      { label: "אפרסק", isAllergen: true },
+      { label: "נקטרינה", isAllergen: true },
+      { label: "פירות יער", aliases: ["ברי יער"], isAllergen: true },
+      { label: "דובדבן", isAllergen: true },
+      { label: "שזיף", isAllergen: true },
+    ],
+  },
+  {
+    id: "nuts",
+    title: "אגוזים",
+    kicker: "אלרגנים מסומנים",
+    items: [
+      { label: "בוטנים", aliases: ["חמאת בוטנים"], isAllergen: true },
+      { label: "אגוזי מלך", isAllergen: true },
+      { label: "שקדים", isAllergen: true },
+      { label: "פיסטוק", isAllergen: true },
+      { label: "מקדמיה", isAllergen: true },
+      { label: "ברזיל", aliases: ["אגוז ברזיל"], isAllergen: true },
+      { label: "קשיו", isAllergen: true },
+      { label: "לוז", isAllergen: true },
+      { label: "פקאן", isAllergen: true },
+      { label: "צנובר", isAllergen: true },
+    ],
+  },
+]);
+
+const TASTING_CHECKLIST_INDEX = TASTING_CHECKLIST_GROUPS.map((group) => ({
+  ...group,
+  items: group.items.map((item) => {
+    const config = typeof item === "string" ? { label: item } : item;
+    const aliases = [config.label, ...(config.aliases || [])];
+    return {
+      ...config,
+      aliases,
+      normalizedAliases: aliases.map((alias) => normalizeTastingText(alias)),
+    };
+  }),
+}));
+
 // ---- App State ----
 const state = createEmptyState();
 
 let currentWho     = localStorage.getItem(WHO_KEY) || "mom";
-let currentTab     = "home";   // "home" | "timeline" | "milestones" | "health"
+let currentTab     = "home";   // "home" | "timeline" | "milestones" | "tastings" | "health"
 let healthMenuOpen = false;    // tracks health FAB speed-dial state
 let activeSheet    = null;     // id of the currently open bottom sheet, or null
 let editingEntryId = null;     // non-null when editing an existing entry
 let editingEntryGroupIds = null;
+let entrySubmitTargetTab = "timeline";
 let _pendingPoopBtn = null;
 let timelineBarSelection = null;
 let currentTimelineFilter = "all";
@@ -207,6 +319,13 @@ const el = {
   timelineFilters:   Array.from(document.querySelectorAll("[data-timeline-filter]")),
   timelineResultsMeta: document.querySelector("#timelineResultsMeta"),
   timelineDaySummary: document.querySelector("#timelineDaySummary"),
+
+  // Tasting checklist tab
+  tastingCompletionText: document.querySelector("#tastingCompletionText"),
+  tastingCompletionBar: document.querySelector("#tastingCompletionBar"),
+  tastingOverview: document.querySelector("#tastingOverview"),
+  tastingChecklistGroups: document.querySelector("#tastingChecklistGroups"),
+  openGenericTastingEntry: document.querySelector("#openGenericTastingEntry"),
 
   // Milestone form
   milestoneForm:     document.querySelector("#milestoneForm"),
@@ -649,11 +768,18 @@ function registerEvents() {
     } else if (fabState.action === "health-menu") {
       toggleHealthMenu();
     } else if (fabState.action === "entry") {
-      openEntrySheetForNew();
+      if (currentTab === "tastings") {
+        openEntrySheetForNew("tasting", { submitTargetTab: "tastings" });
+      } else {
+        openEntrySheetForNew();
+      }
     }
   });
 
   el.openMilestoneSheet?.addEventListener("click", () => openSheet("sheetMilestone"));
+  el.openGenericTastingEntry?.addEventListener("click", () => {
+    openEntrySheetForNew("tasting", { submitTargetTab: "tastings" });
+  });
 
   // ── Sheet: close via overlay click ──
   el.sheetOverlay.addEventListener("click", () => closeAllSheets());
@@ -738,7 +864,8 @@ function registerEvents() {
     render();
     btn.disabled = false;
     closeAllSheets();
-    switchTab("timeline");
+    switchTab(entrySubmitTargetTab || "timeline");
+    entrySubmitTargetTab = "timeline";
   });
 
   // ── Milestone form submit ──
@@ -1080,6 +1207,15 @@ function registerEvents() {
     });
   });
 
+  el.tastingChecklistGroups?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-open-tasting-item]");
+    if (!button) return;
+    openEntrySheetForNew("tasting", {
+      prefilledDetails: button.dataset.openTastingItem || "",
+      submitTargetTab: "tastings",
+    });
+  });
+
   // ── Keyboard: Escape closes sheets ──
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && (activeSheet || healthMenuOpen)) closeAllSheets();
@@ -1089,9 +1225,15 @@ function registerEvents() {
 // ============================================================
 // ENTRY SHEET HELPERS (new / edit)
 // ============================================================
-function openEntrySheetForNew(preselectedType = null) {
+function openEntrySheetForNew(preselectedType = null, options = {}) {
+  const {
+    prefilledDetails = "",
+    submitTargetTab = "timeline",
+  } = options;
+
   editingEntryId = null;
   editingEntryGroupIds = null;
+  entrySubmitTargetTab = submitTargetTab;
   el.sheetEntryTitle.textContent = "הוספת אירוע";
   el.entrySubmitBtn.textContent  = "שמור אירוע ✓";
   el.dailyForm.reset();
@@ -1104,6 +1246,9 @@ function openEntrySheetForNew(preselectedType = null) {
       setTimeout(() => el.entryDetails.focus(), 380);
     }
   }
+  if (prefilledDetails) {
+    el.entryDetails.value = prefilledDetails;
+  }
   openSheet("sheetEntry");
 }
 
@@ -1111,6 +1256,7 @@ function openEntrySheetForEdit(entry, options = {}) {
   const groupedEntryIds = Array.isArray(options.groupedEntryIds) ? options.groupedEntryIds : null;
   editingEntryId = entry.id;
   editingEntryGroupIds = groupedEntryIds;
+  entrySubmitTargetTab = currentTab === "tastings" ? "tastings" : "timeline";
   setPoopPeeOptionEnabled(Boolean(groupedEntryIds?.length));
   el.sheetEntryTitle.textContent = groupedEntryIds?.length ? "עריכת קקי ופיפי ✏️" : "עריכת אירוע ✏️";
   el.entrySubmitBtn.textContent  = "עדכן אירוע ✓";
@@ -1464,6 +1610,7 @@ function render() {
   renderTimelineFilters(selectedDateEntries, groupedTimelineEntries, selectedDateKey);
   renderTimelineDaySummary(selectedDateEntries);
   renderTimeline(groupedTimelineEntries, selectedDateKey); // History list = selected date only
+  renderTastingChecklist();
   renderMilestones();
   renderGrowth();
   renderMedical();
@@ -1733,6 +1880,73 @@ function renderTimelineDaySummary(entries) {
     .join("");
 }
 
+function renderTastingChecklist() {
+  if (!el.tastingChecklistGroups) return;
+
+  const summary = getTastingChecklistSummary();
+
+  if (el.tastingCompletionText) {
+    el.tastingCompletionText.textContent = `${summary.tastedCount} / ${summary.totalCount}`;
+  }
+
+  if (el.tastingCompletionBar) {
+    el.tastingCompletionBar.style.width = `${Math.max(0, Math.round(summary.progress * 100))}%`;
+  }
+
+  if (el.tastingOverview) {
+    const overviewChips = [
+      { label: "נטעמו", value: `${summary.tastedCount}` },
+      { label: "אלרגנים שנבדקו", value: `${summary.allergenTastedCount}` },
+      { label: "טעימה אחרונה", value: summary.lastTastingLabel || "עדיין אין" },
+    ];
+
+    el.tastingOverview.innerHTML = overviewChips.map((chip) => `
+      <article class="tasting-overview__card">
+        <span class="tasting-overview__label">${escapeHtml(chip.label)}</span>
+        <strong>${escapeHtml(chip.value)}</strong>
+      </article>
+    `).join("");
+  }
+
+  el.tastingChecklistGroups.innerHTML = summary.groups.map((group) => `
+    <section class="tasting-group">
+      <div class="tasting-group__header">
+        <div>
+          <p class="panel-kicker">${escapeHtml(group.kicker)}</p>
+          <h3>${escapeHtml(group.title)}</h3>
+        </div>
+        <span class="tasting-group__counter">${group.tastedCount}/${group.totalCount}</span>
+      </div>
+      <div class="tasting-list">
+        ${group.items.map((item) => {
+          const statusClass = item.matchedEntry ? "is-tasted" : "is-pending";
+          const actionLabel = item.matchedEntry ? "עוד טעימה" : "סמן טעימה";
+          const ratingEmoji = item.matchedEntry?.rating ? (TASTING_RATING_EMOJIS[item.matchedEntry.rating] || "") : "";
+          const metaParts = [];
+
+          if (item.isAllergen) metaParts.push("אלרגן");
+          if (item.matchedEntry?.time) metaParts.push(`נטעם ${timeSince(item.matchedEntry.time)}`);
+          if (ratingEmoji) metaParts.push(`תגובה ${ratingEmoji}`);
+
+          return `
+            <button class="tasting-item ${statusClass}" type="button" data-open-tasting-item="${escapeHtml(item.label)}">
+              <span class="tasting-item__status" aria-hidden="true">${item.matchedEntry ? "✓" : "+"}</span>
+              <span class="tasting-item__body">
+                <span class="tasting-item__title-row">
+                  <strong>${escapeHtml(item.label)}</strong>
+                  ${item.isAllergen ? '<span class="tasting-item__pill">אלרגן</span>' : ""}
+                </span>
+                <span class="tasting-item__meta">${escapeHtml(metaParts.join(" · ") || "עדיין לא תועד")}</span>
+              </span>
+              <span class="tasting-item__cta">${escapeHtml(actionLabel)}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
+}
+
 function filterTimelineEntries(entries, filterKey) {
   const groups = {
     all: () => true,
@@ -1755,6 +1969,49 @@ function getTimelineFilterLabel(filterKey) {
     health: "בריאות",
   };
   return labels[filterKey] || labels.all;
+}
+
+function getTastingChecklistSummary() {
+  const tastingEntries = getVisibleEntries(state.dailyEntries)
+    .filter((entry) => entry.type === "tasting" && entry.details);
+
+  const groups = TASTING_CHECKLIST_INDEX.map((group) => {
+    const items = group.items.map((item) => {
+      const matchedEntry = tastingEntries.find((entry) => {
+        const normalizedDetails = normalizeTastingText(entry.details);
+        return item.normalizedAliases.some((alias) => alias && normalizedDetails.includes(alias));
+      }) || null;
+
+      return {
+        ...item,
+        matchedEntry,
+      };
+    });
+
+    return {
+      ...group,
+      items,
+      totalCount: items.length,
+      tastedCount: items.filter((item) => item.matchedEntry).length,
+    };
+  });
+
+  const flatItems = groups.flatMap((group) => group.items);
+  const tastedItems = flatItems.filter((item) => item.matchedEntry);
+  const lastTastingItem = tastedItems
+    .slice()
+    .sort((a, b) => safeDateMs(b.matchedEntry?.time, 0) - safeDateMs(a.matchedEntry?.time, 0))[0] || null;
+
+  return {
+    groups,
+    totalCount: flatItems.length,
+    tastedCount: tastedItems.length,
+    allergenTastedCount: tastedItems.filter((item) => item.isAllergen).length,
+    progress: flatItems.length ? tastedItems.length / flatItems.length : 0,
+    lastTastingLabel: lastTastingItem?.matchedEntry
+      ? `${lastTastingItem.label} · ${formatTime(lastTastingItem.matchedEntry.time)}`
+      : "",
+  };
 }
 
 function getTimelineEntriesForDelete(button) {
@@ -2301,6 +2558,14 @@ function escapeHtml(value) {
     .replaceAll(">",  "&gt;")
     .replaceAll('"',  "&quot;")
     .replaceAll("'",  "&#39;");
+}
+
+function normalizeTastingText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[׳״"'`]/g, "")
+    .replace(/[^a-z0-9\u0590-\u05ff]+/gi, "");
 }
 
 // ============================================================

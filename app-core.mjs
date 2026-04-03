@@ -40,6 +40,13 @@ const TAB_FAB_CONFIG = Object.freeze({
     action: "milestone",
     buttonText: "+",
   }),
+  tastings: Object.freeze({
+    visible: true,
+    label: "הוסף טעימה",
+    hint: "לחץ + להוספת טעימה חדשה",
+    action: "entry",
+    buttonText: "+",
+  }),
   health: Object.freeze({
     visible: true,
     label: "פתח תפריט בריאות",

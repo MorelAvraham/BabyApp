@@ -251,6 +251,40 @@
         <p class="fab-hint" data-fab-hint-for="milestones">לחץ <strong>+</strong> להוספת אבן דרך חדשה</p>
       </div><!-- /tabMilestones -->
 
+      <!-- ══ TAB: Tastings ══ -->
+      <div class="tab-view" id="tabTastings">
+        <section class="hero-panel tasting-hero">
+          <div class="tasting-hero__content">
+            <div>
+              <p class="panel-kicker">צ'קליסט טעימות</p>
+              <h2>מה כבר ניסינו?</h2>
+              <p class="tasting-hero__subtitle">מבוסס על מדריך הטעימות, ומתעדכן אוטומטית לפי רישומי הטעימה שכבר שמרתם.</p>
+            </div>
+            <div class="tasting-hero__badge">
+              <span>התקדמות</span>
+              <strong id="tastingCompletionText">0 / 0</strong>
+            </div>
+          </div>
+          <div class="tasting-progress" aria-hidden="true">
+            <span id="tastingCompletionBar" class="tasting-progress__fill"></span>
+          </div>
+          <div id="tastingOverview" class="tasting-overview"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">הכול במקום אחד</p>
+              <h2>מאכלים לסימון</h2>
+            </div>
+            <button id="openGenericTastingEntry" class="secondary-button" type="button">+ טעימה חופשית</button>
+          </div>
+          <div id="tastingChecklistGroups" class="tasting-groups"></div>
+        </section>
+
+        <p class="fab-hint" data-fab-hint-for="tastings">לחץ <strong>+</strong> להוספת טעימה חדשה</p>
+      </div><!-- /tabTastings -->
+
       <!-- ══ TAB: Health ══ -->
       <div class="tab-view" id="tabHealth">
 
@@ -312,6 +346,10 @@
       <button class="bottom-nav__item" data-nav-tab="milestones" type="button">
         <span class="bottom-nav__icon">⭐</span>
         <span class="bottom-nav__label">אבני דרך</span>
+      </button>
+      <button class="bottom-nav__item" data-nav-tab="tastings" type="button">
+        <span class="bottom-nav__icon">🥦</span>
+        <span class="bottom-nav__label">טעימות</span>
       </button>
       <button class="bottom-nav__item" data-nav-tab="health" type="button">
         <span class="bottom-nav__icon">🩺</span>
