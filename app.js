@@ -308,6 +308,7 @@ const el = {
   dailyForm:         document.querySelector("#dailyForm"),
   entryType:         document.querySelector("#entryType"),
   entryTypePoopPee:  document.querySelector("#entryTypePoopPee"),
+  entryTimeLabel:    document.querySelector("#entryTimeLabel"),
   entryTime:         document.querySelector("#entryTime"),
   entryDetails:      document.querySelector("#entryDetails"),
   entryWhoSelect:    document.querySelector("#entryWhoSelect"),
@@ -662,6 +663,7 @@ function sanitizeLegacyState(input) {
   return {
     babyName: typeof input?.babyName === "string" && input.babyName.trim() ? input.babyName.trim() : fallback.babyName,
     dailyEntries: Array.isArray(input?.dailyEntries) ? input.dailyEntries : [],
+    tastingEntries: Array.isArray(input?.tastingEntries) ? input.tastingEntries : [],
     milestones: Array.isArray(input?.milestones) ? input.milestones : [],
     growthEntries: Array.isArray(input?.growthEntries) ? input.growthEntries : [],
     medicalEntries: Array.isArray(input?.medicalEntries) ? input.medicalEntries : [],
@@ -865,6 +867,18 @@ function registerEvents() {
       editingEntryId = null;
     } else if (isDiaperCombo) {
       await saveDiaperComboRecords(payload);
+    } else if (isTasting) {
+      const now = new Date();
+      const nextRecord = normalizeCollectionItem("tastingEntries", {
+        id: crypto.randomUUID(),
+        createdAt: now.toISOString(),
+        dayKey: getDayKey(now),
+        details: payload.details,
+        who: payload.who,
+        rating: payload.rating,
+      }, { deviceId });
+      replaceRecordInState("tastingEntries", nextRecord);
+      await persistRecord("tastingEntries", nextRecord);
     } else {
       // Add new entry
       const nextRecord = normalizeCollectionItem("dailyEntries", {
@@ -935,7 +949,7 @@ function registerEvents() {
 
       // Medication or Tasting: open the entry sheet pre-filled so user can specify details
       if (type === "medication" || type === "tasting") {
-        openEntrySheetForNew(type);
+        openEntrySheetForNew(type, { submitTargetTab: type === "tasting" ? "tastings" : "timeline" });
         return;
       }
 
@@ -972,6 +986,10 @@ function registerEvents() {
     
     el.mlAmountLabel.classList.toggle("hidden", !isMeal);
     el.medPillsSection.classList.toggle("hidden", !isMed);
+    el.entryTimeLabel?.classList.toggle("hidden", isTasting);
+    if (el.entryTime) {
+      el.entryTime.required = !isTasting;
+    }
     const tastingRatingSection = document.querySelector("#tastingRatingSection");
     if (tastingRatingSection) {
       tastingRatingSection.classList.toggle("hidden", !isTasting);
@@ -1618,7 +1636,9 @@ function render() {
   const selectedDateKey = el.timelineDatePicker && el.timelineDatePicker.value 
     ? el.timelineDatePicker.value 
     : getDayKey(new Date());
-  const selectedDateEntries = getVisibleEntries(state.dailyEntries).filter((entry) => getDayKey(entry.time) === selectedDateKey);
+  const selectedDateEntries = getVisibleEntries(state.dailyEntries)
+    .filter((entry) => entry.type !== "tasting")
+    .filter((entry) => getDayKey(entry.time) === selectedDateKey);
   const filteredTimelineEntries = filterTimelineEntries(selectedDateEntries, currentTimelineFilter);
   const groupedTimelineEntries = coalesceHistoryEntries(filteredTimelineEntries);
 
@@ -1987,7 +2007,7 @@ function filterTimelineEntries(entries, filterKey) {
   const groups = {
     all: () => true,
     sleep: (entry) => entry.type === "sleep" || entry.type === "wake",
-    food: (entry) => entry.type === "meal" || entry.type === "tasting",
+    food: (entry) => entry.type === "meal",
     diaper: (entry) => entry.type === "poop" || entry.type === "pee",
     health: (entry) => entry.type === "medication",
   };
@@ -2008,8 +2028,23 @@ function getTimelineFilterLabel(filterKey) {
 }
 
 function getTastingChecklistSummary() {
-  const tastingEntries = getVisibleEntries(state.dailyEntries)
-    .filter((entry) => entry.type === "tasting" && entry.details);
+  const legacyTastingEntries = getVisibleEntries(state.dailyEntries)
+    .filter((entry) => entry.type === "tasting" && entry.details)
+    .map((entry) => normalizeCollectionItem("tastingEntries", {
+      id: entry.id,
+      createdAt: entry.time || entry.createdAt,
+      updatedAt: entry.updatedAt,
+      deletedAt: entry.deletedAt,
+      dayKey: entry.dayKey || getDayKey(entry.time),
+      details: entry.details,
+      who: entry.who,
+      rating: entry.rating,
+      sourceDeviceId: entry.sourceDeviceId,
+    }, { deviceId }));
+  const tastingEntries = [
+    ...getVisibleEntries(state.tastingEntries),
+    ...legacyTastingEntries,
+  ];
 
   const groups = TASTING_CHECKLIST_INDEX.map((group) => {
     const items = group.items.map((item) => {
@@ -2475,6 +2510,8 @@ function setDefaultFormValues() {
   if (el.milestoneDate)   el.milestoneDate.value = toDateInputValue(new Date());
   if (el.mlAmountLabel)   el.mlAmountLabel.classList.add("hidden");
   if (el.medPillsSection) el.medPillsSection.classList.add("hidden");
+  if (el.entryTimeLabel)  el.entryTimeLabel.classList.remove("hidden");
+  if (el.entryTime)       el.entryTime.required = true;
   
   const tastingRatingSection = document.querySelector("#tastingRatingSection");
   if (tastingRatingSection) {

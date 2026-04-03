@@ -7,6 +7,10 @@ export const COLLECTION_CONFIG = {
     field: "time",
     sort: (a, b) => safeDateMs(b.time) - safeDateMs(a.time),
   },
+  tastingEntries: {
+    field: "createdAt",
+    sort: (a, b) => safeDateMs(b.createdAt) - safeDateMs(a.createdAt),
+  },
   milestones: {
     field: "date",
     sort: (a, b) => safeDateMs(a.date) - safeDateMs(b.date),
@@ -60,6 +64,7 @@ export function createEmptyState() {
   return {
     babyName: DEFAULT_BABY_NAME,
     dailyEntries: [],
+    tastingEntries: [],
     milestones: [],
     growthEntries: [],
     medicalEntries: [],
@@ -210,6 +215,23 @@ export function normalizeMilestone(input, options = {}) {
   };
 }
 
+export function normalizeTastingEntry(input, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const nowIso = now.toISOString();
+  const createdAtIso = toUtcIsoString(input?.createdAt || input?.updatedAt || now, now);
+  const rating = normalizeNumber(input?.rating, { min: 1, max: 5, integer: true });
+
+  return {
+    ...normalizeRecordCommon(input, nowIso, options.deviceId || "unknown-device"),
+    createdAt: createdAtIso,
+    updatedAt: isValidDateValue(input?.updatedAt) ? new Date(input.updatedAt).toISOString() : nowIso,
+    dayKey: normalizeDateOnly(input?.dayKey, new Date(createdAtIso)),
+    details: normalizeString(input?.details),
+    who: normalizeWho(input?.who),
+    rating,
+  };
+}
+
 export function normalizeGrowthEntry(input, options = {}) {
   const now = options.now instanceof Date ? options.now : new Date();
   const nowIso = now.toISOString();
@@ -265,6 +287,7 @@ export function normalizeDateOnly(value, fallbackDate = new Date()) {
 
 export function normalizeCollectionItem(collectionName, input, options = {}) {
   if (collectionName === "dailyEntries") return normalizeDailyEntry(input, options);
+  if (collectionName === "tastingEntries") return normalizeTastingEntry(input, options);
   if (collectionName === "milestones") return normalizeMilestone(input, options);
   if (collectionName === "growthEntries") return normalizeGrowthEntry(input, options);
   if (collectionName === "medicalEntries") return normalizeMedicalEntry(input, options);
