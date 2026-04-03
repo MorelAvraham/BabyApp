@@ -144,8 +144,8 @@ const TASTING_CHECKLIST_GROUPS = Object.freeze([
     title: "דגנים",
     kicker: "להרחבת התפריט",
     items: [
-      "אורז", "בורגול", "חיטה", "סולת", "קמח תירס", "קינואה",
-      { label: "כוסמת", isAllergen: true }, "שיבולת שועל",
+      "אורז", "בורגול", "סולת", "קמח תירס", "קינואה",
+      "שיבולת שועל",
       "כוסמין", "דוחן",
     ],
   },
@@ -171,12 +171,21 @@ const TASTING_CHECKLIST_GROUPS = Object.freeze([
     ],
   },
   {
+    id: "generalAllergens",
+    title: "אלרגנים כלליים",
+    kicker: "מעקב 3 ימים ברצף",
+    items: [
+      { label: "חיטה", isAllergen: true },
+      { label: "שומשום", aliases: ["טחינה"], isAllergen: true },
+      { label: "סויה", isAllergen: true },
+      { label: "כוסמת", isAllergen: true },
+    ],
+  },
+  {
     id: "specialAllergens",
     title: "פירות מיוחדים ורגישים",
     kicker: "לתת בזהירות ובהדרגה",
     items: [
-      { label: "שומשום", aliases: ["טחינה"], isAllergen: true },
-      { label: "סויה", isAllergen: true },
       { label: "קיווי", isAllergen: true },
       { label: "אננס", isAllergen: true },
       { label: "תות", isAllergen: true },
