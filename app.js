@@ -1942,7 +1942,7 @@ function renderTastingChecklist() {
     const overviewChips = [
       { label: "נטעמו", value: `${summary.tastedCount}` },
       { label: "אלרגנים הושלמו", value: `${summary.allergenCompletedCount}` },
-      { label: "בתהליך 3 ימים", value: `${summary.allergenInProgressCount}` },
+      { label: "בתהליך 3 טעימות", value: `${summary.allergenInProgressCount}` },
     ];
 
     el.tastingOverview.innerHTML = overviewChips.map((chip) => `
@@ -2063,14 +2063,14 @@ function getTastingChecklistSummary() {
       });
       const sortedEntries = matchedEntries
         .slice()
-        .sort((a, b) => safeDateMs(b.time, 0) - safeDateMs(a.time, 0));
-      const allergenDayStreak = item.isAllergen ? getConsecutiveDayStreak(sortedEntries) : 0;
+        .sort((a, b) => safeDateMs(b.createdAt || b.time, 0) - safeDateMs(a.createdAt || a.time, 0));
+      const allergenProgressCount = item.isAllergen ? Math.min(3, sortedEntries.length) : 0;
 
       return {
         ...item,
         matchedEntries: sortedEntries,
         latestEntry: sortedEntries[0] || null,
-        allergenDayStreak,
+        allergenProgressCount,
       };
     });
 
@@ -2085,8 +2085,8 @@ function getTastingChecklistSummary() {
   const flatItems = groups.flatMap((group) => group.items);
   const tastedItems = flatItems.filter((item) => item.matchedEntries.length);
   const allergenItems = flatItems.filter((item) => item.isAllergen);
-  const allergenCompletedCount = allergenItems.filter((item) => item.allergenDayStreak >= 3).length;
-  const allergenInProgressCount = allergenItems.filter((item) => item.allergenDayStreak > 0 && item.allergenDayStreak < 3).length;
+  const allergenCompletedCount = allergenItems.filter((item) => item.allergenProgressCount >= 3).length;
+  const allergenInProgressCount = allergenItems.filter((item) => item.allergenProgressCount > 0 && item.allergenProgressCount < 3).length;
   const visibleGroups = groups
     .map((group) => {
       const visibleItems = group.items.filter((item) => matchesTastingFilter(item) && matchesTastingSearch(item));
@@ -2114,7 +2114,7 @@ function matchesTastingFilter(item) {
   if (currentTastingFilter === "pending") return !item.matchedEntries.length;
   if (currentTastingFilter === "allergens") return item.isAllergen;
   if (currentTastingFilter === "done") {
-    if (item.isAllergen) return item.allergenDayStreak >= 3;
+    if (item.isAllergen) return item.allergenProgressCount >= 3;
     return item.matchedEntries.length > 0;
   }
   return true;
@@ -2128,24 +2128,24 @@ function matchesTastingSearch(item) {
 }
 
 function getAllergenProgressLabel(item) {
-  const streak = Math.min(3, item.allergenDayStreak || 0);
-  if (streak >= 3) {
+  const progress = Math.min(3, item.allergenProgressCount || 0);
+  if (progress >= 3) {
     return {
       pill: "אלרגן 3/3",
-      meta: "בדיקת 3 ימים הושלמה",
+      meta: "הושלמו 3 טעימות",
     };
   }
 
-  if (streak > 0) {
+  if (progress > 0) {
     return {
-      pill: `אלרגן ${streak}/3`,
-      meta: `ברצף ${streak}/3 ימים`,
+      pill: `אלרגן ${progress}/3`,
+      meta: `נספרו ${progress}/3 טעימות`,
     };
   }
 
   return {
     pill: "אלרגן 0/3",
-    meta: "צריך 3 ימים ברצף",
+    meta: "צריך 3 טעימות",
   };
 }
 
@@ -2703,27 +2703,6 @@ function normalizeTastingText(value) {
     .toLowerCase()
     .replace(/[׳״"'`]/g, "")
     .replace(/[^a-z0-9\u0590-\u05ff]+/gi, "");
-}
-
-function getConsecutiveDayStreak(entries) {
-  const dayKeys = [...new Set(entries.map((entry) => entry.dayKey || getDayKey(entry.time)).filter(Boolean))]
-    .sort((a, b) => safeDateMs(`${b}T00:00:00`, 0) - safeDateMs(`${a}T00:00:00`, 0));
-
-  if (!dayKeys.length) return 0;
-
-  let streak = 1;
-  for (let index = 1; index < dayKeys.length; index += 1) {
-    const previous = safeDateMs(`${dayKeys[index - 1]}T00:00:00`, 0);
-    const current = safeDateMs(`${dayKeys[index]}T00:00:00`, 0);
-    const diffDays = Math.round((previous - current) / (24 * 60 * 60 * 1000));
-    if (diffDays === 1) {
-      streak += 1;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
 }
 
 // ============================================================
