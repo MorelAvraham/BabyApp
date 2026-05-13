@@ -54,6 +54,7 @@ const FIREBASE_CONFIG = {
 const WHO_KEY              = "eitan-or-who";
 const THEME_KEY            = "eitan-or-theme";
 const DEVICE_ID_KEY        = "eitan-or-device-id";
+const RECIPES_KEY          = "eitan-or-recipes";
 const BIRTH_DATE           = "2025-09-16"; // Eitan Or's birthdate (YYYY-MM-DD)
 const SYNC_LOG_KEY         = "eitan-or-sync-log";
 const MAX_DIAGNOSTICS      = 25;
@@ -434,6 +435,15 @@ const el = {
   poopChoiceBoth:      document.querySelector("#poopChoiceBoth"),
   poopChoicePoop:      document.querySelector("#poopChoicePoop"),
   poopChoiceCancel:    document.querySelector("#poopChoiceCancel"),
+
+  recipeSheetBackdrop: document.getElementById("recipeSheetBackdrop"),
+  recipeSheet:         document.getElementById("recipeSheet"),
+  addRecipeBtn:        document.getElementById("addRecipeBtn"),
+  recipeForm:          document.getElementById("recipeForm"),
+  recipeTitleInput:    document.getElementById("recipeTitleInput"),
+  recipeNotesInput:    document.getElementById("recipeNotesInput"),
+  recipeLinkInput:     document.getElementById("recipeLinkInput"),
+  recipesList:         document.getElementById("recipesList"),
 };
 
 // ============================================================
@@ -1263,6 +1273,49 @@ function registerEvents() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && (activeSheet || healthMenuOpen)) closeAllSheets();
   });
+
+  // ── Recipes ──
+  el.addRecipeBtn?.addEventListener("click", () => {
+    el.recipeForm.reset();
+    el.recipeSheet.classList.remove("hidden");
+    el.recipeSheetBackdrop.classList.remove("hidden");
+    el.recipeTitleInput.focus();
+  });
+
+  el.recipeSheetBackdrop?.addEventListener("click", () => {
+    el.recipeSheet.classList.add("hidden");
+    el.recipeSheetBackdrop.classList.add("hidden");
+  });
+
+  el.recipeForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = el.recipeTitleInput.value.trim();
+    if (!title) return;
+
+    const recipes = loadRecipes();
+    recipes.push({
+      id: crypto.randomUUID(),
+      title,
+      notes: el.recipeNotesInput.value.trim(),
+      link: el.recipeLinkInput.value.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    saveRecipes(recipes);
+
+    el.recipeSheet.classList.add("hidden");
+    el.recipeSheetBackdrop.classList.add("hidden");
+    el.recipeForm.reset();
+    renderRecipes();
+  });
+
+  el.recipesList?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-delete-recipe]");
+    if (!btn) return;
+    const id = btn.dataset.deleteRecipe;
+    const recipes = loadRecipes().filter((r) => r.id !== id);
+    saveRecipes(recipes);
+    renderRecipes();
+  });
 }
 
 // ============================================================
@@ -1660,6 +1713,7 @@ function render() {
   renderGrowth();
   renderMedical();
   renderPumping();
+  renderRecipes();
   updateFeedReminder();
 }
 
@@ -2163,6 +2217,52 @@ function getTimelineEntriesForDelete(button) {
   }
 
   return [];
+}
+
+// ---- Recipes (localStorage) ----
+function loadRecipes() {
+  try {
+    return JSON.parse(localStorage.getItem(RECIPES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveRecipes(recipes) {
+  localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes));
+}
+
+function renderRecipes() {
+  const recipes = loadRecipes();
+  const container = el.recipesList;
+  if (!container) return;
+
+  if (recipes.length === 0) {
+    container.innerHTML = '<p class="recipes-empty">אין מתכונים עדיין. לחץ על "+ הוסף מתכון" כדי להתחיל.</p>';
+    return;
+  }
+
+  container.innerHTML = recipes
+    .slice()
+    .reverse()
+    .map((recipe) => {
+      const linkHtml = recipe.link
+        ? `<a class="recipe-card__link" href="${recipe.link}" target="_blank" rel="noopener noreferrer">${recipe.link}</a>`
+        : "";
+      const notesHtml = recipe.notes
+        ? `<p class="recipe-card__notes">${recipe.notes.replace(/</g, "&lt;")}</p>`
+        : "";
+      return `
+        <div class="recipe-card" data-recipe-id="${recipe.id}">
+          <div class="recipe-card__title">${recipe.title.replace(/</g, "&lt;")}</div>
+          ${notesHtml}
+          ${linkHtml}
+          <div class="recipe-card__footer">
+            <button class="recipe-card__delete" data-delete-recipe="${recipe.id}" type="button">🗑 מחק</button>
+          </div>
+        </div>`;
+    })
+    .join("");
 }
 
 // ---- Milestones Render ----
