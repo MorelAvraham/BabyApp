@@ -1324,6 +1324,18 @@ function registerEvents() {
   });
 
   el.recipesList?.addEventListener("click", async (e) => {
+    // Toggle accordion
+    const toggleBtn = e.target.closest("[data-toggle-recipe]");
+    if (toggleBtn) {
+      const item = toggleBtn.closest(".recipe-item");
+      const body = item.querySelector(".recipe-item__body");
+      const isOpen = !body.hidden;
+      body.hidden = isOpen;
+      toggleBtn.setAttribute("aria-expanded", String(!isOpen));
+      item.classList.toggle("recipe-item--open", !isOpen);
+      return;
+    }
+
     // Delete
     const deleteBtn = e.target.closest("[data-delete-recipe]");
     if (deleteBtn) {
@@ -2279,6 +2291,7 @@ function renderRecipes() {
     return;
   }
 
+  const canShare = !!navigator.share;
   container.innerHTML = recipes
     .map((recipe) => {
       const safe = (s) => (s || "").replace(/</g, "&lt;");
@@ -2288,19 +2301,21 @@ function renderRecipes() {
       const notesHtml = recipe.notes
         ? `<p class="recipe-item__notes">${safe(recipe.notes)}</p>`
         : "";
-      const canShare = !!navigator.share;
       return `
         <div class="recipe-item" data-recipe-id="${recipe.id}">
-          <div class="recipe-item__header">
+          <button class="recipe-item__toggle" data-toggle-recipe="${recipe.id}" type="button" aria-expanded="false">
             <span class="recipe-item__title">${safe(recipe.title)}</span>
+            <span class="recipe-item__chevron">›</span>
+          </button>
+          <div class="recipe-item__body" hidden>
+            ${notesHtml}
+            ${linkHtml}
             <div class="recipe-item__actions">
-              ${canShare ? `<button class="recipe-item__action-btn" data-share-recipe="${recipe.id}" type="button" aria-label="שתף">📤</button>` : ""}
-              <button class="recipe-item__action-btn" data-edit-recipe="${recipe.id}" type="button" aria-label="ערוך">✏️</button>
-              <button class="recipe-item__action-btn recipe-item__action-btn--delete" data-delete-recipe="${recipe.id}" type="button" aria-label="מחק">🗑</button>
+              ${canShare ? `<button class="recipe-item__action-btn" data-share-recipe="${recipe.id}" type="button" aria-label="שתף">📤 שתף</button>` : ""}
+              <button class="recipe-item__action-btn" data-edit-recipe="${recipe.id}" type="button" aria-label="ערוך">✏️ ערוך</button>
+              <button class="recipe-item__action-btn recipe-item__action-btn--delete" data-delete-recipe="${recipe.id}" type="button" aria-label="מחק">🗑 מחק</button>
             </div>
           </div>
-          ${notesHtml}
-          ${linkHtml}
         </div>`;
     })
     .join("");
