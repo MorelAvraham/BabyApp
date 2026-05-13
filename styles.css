@@ -2830,6 +2830,19 @@ button,
   line-height: 1;
 }
 
+/* Recipe grid */
+#recipesList.stack-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  #recipesList.stack-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Recipe item cards */
 .recipe-item {
   display: flex;
@@ -2845,8 +2858,8 @@ button,
 .recipe-item__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .recipe-item__title {
@@ -2855,28 +2868,38 @@ button,
   color: var(--text);
   flex: 1 1 auto;
   min-width: 0;
+  padding-top: 2px;
 }
 
-.recipe-item__delete {
+.recipe-item__actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.recipe-item__action-btn {
   background: none;
   border: none;
-  color: var(--muted);
   font-size: 1rem;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 5px;
   border-radius: 8px;
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 34px;
+  min-width: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: background 140ms ease, color 140ms ease;
+  transition: background 140ms ease;
+  color: var(--muted);
 }
 
-.recipe-item__delete:hover {
+.recipe-item__action-btn:hover {
   background: var(--accent-soft);
-  color: var(--accent-deep);
+}
+
+.recipe-item__action-btn--delete:hover {
+  background: #ffe5e5;
+  color: #c0392b;
 }
 
 .recipe-item__notes {

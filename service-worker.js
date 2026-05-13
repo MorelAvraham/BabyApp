@@ -7,7 +7,7 @@
 // - Cached responses remain available as an offline fallback.
 // ============================================================
 
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `eitan-or-pwa-shell-${CACHE_VERSION}`;
 
 const APP_SHELL_ASSETS = [

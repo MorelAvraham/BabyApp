@@ -54,7 +54,7 @@ const FIREBASE_CONFIG = {
 const WHO_KEY              = "eitan-or-who";
 const THEME_KEY            = "eitan-or-theme";
 const DEVICE_ID_KEY        = "eitan-or-device-id";
-const RECIPES_KEY          = "eitan-or-recipes";
+// recipes collection lives in Firestore (see COLLECTION_CONFIG in app-core.mjs)
 const BIRTH_DATE           = "2025-09-16"; // Eitan Or's birthdate (YYYY-MM-DD)
 const SYNC_LOG_KEY         = "eitan-or-sync-log";
 const MAX_DIAGNOSTICS      = 25;
@@ -245,6 +245,7 @@ let timelineBarSelection = null;
 let currentTimelineFilter = "all";
 let currentTastingFilter = "all";
 let currentTastingSearch = "";
+let editingRecipeId = null;
 let db             = null;
 let metaDoc        = null;
 let legacyStateDoc = null;
@@ -1277,40 +1278,90 @@ function registerEvents() {
 
   // ── Recipes ──
   el.addRecipeBtn?.addEventListener("click", () => {
+    editingRecipeId = null;
     el.recipeForm.reset();
+    el.recipeSheet.querySelector(".sheet-header h3").textContent = "מתכון חדש 📖";
     openSheet("recipeSheet");
     el.recipeTitleInput.focus();
   });
 
-  el.closeSheetRecipe?.addEventListener("click", () => closeAllSheets());
+  el.closeSheetRecipe?.addEventListener("click", () => {
+    editingRecipeId = null;
+    closeAllSheets();
+  });
 
-  el.recipeForm?.addEventListener("submit", (e) => {
+  el.recipeForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = el.recipeTitleInput.value.trim();
     if (!title) return;
 
-    const recipes = loadRecipes();
-    recipes.push({
-      id: crypto.randomUUID(),
+    const btn = el.recipeForm.querySelector("button[type=submit]");
+    btn.disabled = true;
+
+    const now = new Date();
+    const existing = editingRecipeId
+      ? state.recipes.find((r) => r.id === editingRecipeId)
+      : null;
+
+    const nextRecord = normalizeCollectionItem("recipes", {
+      ...(existing || {}),
+      id: existing?.id || crypto.randomUUID(),
       title,
       notes: el.recipeNotesInput.value.trim(),
       link: el.recipeLinkInput.value.trim(),
-      createdAt: new Date().toISOString(),
-    });
-    saveRecipes(recipes);
+      createdAt: existing?.createdAt || now.toISOString(),
+      updatedAt: now.toISOString(),
+    }, { deviceId });
 
+    replaceRecordInState("recipes", nextRecord);
+    await persistRecord("recipes", nextRecord);
+
+    editingRecipeId = null;
     closeAllSheets();
     el.recipeForm.reset();
+    btn.disabled = false;
     renderRecipes();
   });
 
-  el.recipesList?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-delete-recipe]");
-    if (!btn) return;
-    const id = btn.dataset.deleteRecipe;
-    const recipes = loadRecipes().filter((r) => r.id !== id);
-    saveRecipes(recipes);
-    renderRecipes();
+  el.recipesList?.addEventListener("click", async (e) => {
+    // Delete
+    const deleteBtn = e.target.closest("[data-delete-recipe]");
+    if (deleteBtn) {
+      const recipe = state.recipes.find((r) => r.id === deleteBtn.dataset.deleteRecipe);
+      if (recipe) {
+        await softDeleteRecord("recipes", recipe);
+        renderRecipes();
+      }
+      return;
+    }
+
+    // Edit
+    const editBtn = e.target.closest("[data-edit-recipe]");
+    if (editBtn) {
+      const recipe = state.recipes.find((r) => r.id === editBtn.dataset.editRecipe);
+      if (!recipe) return;
+      editingRecipeId = recipe.id;
+      el.recipeTitleInput.value = recipe.title || "";
+      el.recipeNotesInput.value = recipe.notes || "";
+      el.recipeLinkInput.value = recipe.link || "";
+      el.recipeSheet.querySelector(".sheet-header h3").textContent = "עריכת מתכון ✏️";
+      openSheet("recipeSheet");
+      el.recipeTitleInput.focus();
+      return;
+    }
+
+    // Share
+    const shareBtn = e.target.closest("[data-share-recipe]");
+    if (shareBtn && navigator.share) {
+      const recipe = state.recipes.find((r) => r.id === shareBtn.dataset.shareRecipe);
+      if (!recipe) return;
+      const text = [recipe.title, recipe.notes].filter(Boolean).join("\n\n");
+      try {
+        await navigator.share({ title: recipe.title, text, url: recipe.link || undefined });
+      } catch {
+        // user cancelled or browser blocked — do nothing
+      }
+    }
   });
 }
 
@@ -2215,21 +2266,9 @@ function getTimelineEntriesForDelete(button) {
   return [];
 }
 
-// ---- Recipes (localStorage) ----
-function loadRecipes() {
-  try {
-    return JSON.parse(localStorage.getItem(RECIPES_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveRecipes(recipes) {
-  localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes));
-}
-
+// ---- Recipes ----
 function renderRecipes() {
-  const recipes = loadRecipes();
+  const recipes = getVisibleEntries(state.recipes);
   const container = el.recipesList;
   if (!container) return;
 
@@ -2241,20 +2280,24 @@ function renderRecipes() {
   }
 
   container.innerHTML = recipes
-    .slice()
-    .reverse()
     .map((recipe) => {
+      const safe = (s) => (s || "").replace(/</g, "&lt;");
       const linkHtml = recipe.link
-        ? `<a class="recipe-item__link" href="${recipe.link}" target="_blank" rel="noopener noreferrer">🔗 פתח קישור</a>`
+        ? `<a class="recipe-item__link" href="${safe(recipe.link)}" target="_blank" rel="noopener noreferrer">🔗 פתח קישור</a>`
         : "";
       const notesHtml = recipe.notes
-        ? `<p class="recipe-item__notes">${recipe.notes.replace(/</g, "&lt;")}</p>`
+        ? `<p class="recipe-item__notes">${safe(recipe.notes)}</p>`
         : "";
+      const canShare = !!navigator.share;
       return `
         <div class="recipe-item" data-recipe-id="${recipe.id}">
           <div class="recipe-item__header">
-            <span class="recipe-item__title">${recipe.title.replace(/</g, "&lt;")}</span>
-            <button class="recipe-item__delete" data-delete-recipe="${recipe.id}" type="button" aria-label="מחק מתכון">🗑</button>
+            <span class="recipe-item__title">${safe(recipe.title)}</span>
+            <div class="recipe-item__actions">
+              ${canShare ? `<button class="recipe-item__action-btn" data-share-recipe="${recipe.id}" type="button" aria-label="שתף">📤</button>` : ""}
+              <button class="recipe-item__action-btn" data-edit-recipe="${recipe.id}" type="button" aria-label="ערוך">✏️</button>
+              <button class="recipe-item__action-btn recipe-item__action-btn--delete" data-delete-recipe="${recipe.id}" type="button" aria-label="מחק">🗑</button>
+            </div>
           </div>
           ${notesHtml}
           ${linkHtml}

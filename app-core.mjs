@@ -27,6 +27,10 @@ export const COLLECTION_CONFIG = {
     field: "time",
     sort: (a, b) => safeDateMs(b.time) - safeDateMs(a.time),
   },
+  recipes: {
+    field: "createdAt",
+    sort: (a, b) => safeDateMs(b.createdAt) - safeDateMs(a.createdAt),
+  },
 };
 
 const TAB_FAB_CONFIG = Object.freeze({
@@ -69,6 +73,7 @@ export function createEmptyState() {
     growthEntries: [],
     medicalEntries: [],
     pumpingEntries: [],
+    recipes: [],
     updatedAt: null,
     schemaVersion: SCHEMA_VERSION,
   };
@@ -285,6 +290,19 @@ export function normalizeDateOnly(value, fallbackDate = new Date()) {
   return toDateInputValue(fallbackDate);
 }
 
+function normalizeRecipe(input, options = {}) {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const nowIso = now.toISOString();
+  const deviceId = options.deviceId || "";
+  const common = normalizeRecordCommon(input, nowIso, deviceId);
+  return {
+    ...common,
+    title: normalizeString(input?.title, ""),
+    notes: normalizeString(input?.notes, ""),
+    link: normalizeString(input?.link, ""),
+  };
+}
+
 export function normalizeCollectionItem(collectionName, input, options = {}) {
   if (collectionName === "dailyEntries") return normalizeDailyEntry(input, options);
   if (collectionName === "tastingEntries") return normalizeTastingEntry(input, options);
@@ -292,6 +310,7 @@ export function normalizeCollectionItem(collectionName, input, options = {}) {
   if (collectionName === "growthEntries") return normalizeGrowthEntry(input, options);
   if (collectionName === "medicalEntries") return normalizeMedicalEntry(input, options);
   if (collectionName === "pumpingEntries") return normalizePumpingEntry(input, options);
+  if (collectionName === "recipes") return normalizeRecipe(input, options);
   return input;
 }
 
