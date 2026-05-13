@@ -436,7 +436,6 @@ const el = {
   poopChoicePoop:      document.querySelector("#poopChoicePoop"),
   poopChoiceCancel:    document.querySelector("#poopChoiceCancel"),
 
-  recipeSheetBackdrop: document.getElementById("recipeSheetBackdrop"),
   recipeSheet:         document.getElementById("recipeSheet"),
   addRecipeBtn:        document.getElementById("addRecipeBtn"),
   recipeForm:          document.getElementById("recipeForm"),
@@ -1277,14 +1276,8 @@ function registerEvents() {
   // ── Recipes ──
   el.addRecipeBtn?.addEventListener("click", () => {
     el.recipeForm.reset();
-    el.recipeSheet.classList.remove("hidden");
-    el.recipeSheetBackdrop.classList.remove("hidden");
+    openSheet("recipeSheet");
     el.recipeTitleInput.focus();
-  });
-
-  el.recipeSheetBackdrop?.addEventListener("click", () => {
-    el.recipeSheet.classList.add("hidden");
-    el.recipeSheetBackdrop.classList.add("hidden");
   });
 
   el.recipeForm?.addEventListener("submit", (e) => {
@@ -1302,8 +1295,7 @@ function registerEvents() {
     });
     saveRecipes(recipes);
 
-    el.recipeSheet.classList.add("hidden");
-    el.recipeSheetBackdrop.classList.add("hidden");
+    closeAllSheets();
     el.recipeForm.reset();
     renderRecipes();
   });
