@@ -711,15 +711,15 @@
       <form id="recipeForm" class="form-grid">
         <label>
           שם המתכון *
-          <input type="text" id="recipeTitleInput" placeholder="לדוגמה: פירה גזר ובטטה" required />
+          <input type="text" id="recipeTitleInput" placeholder="לדוגמה: פירה גזר ובטטה" required autocomplete="off" autocorrect="off" />
         </label>
         <label>
           הערות / הכנה
-          <textarea id="recipeNotesInput" rows="5" placeholder="שלבי ההכנה, מרכיבים..."></textarea>
+          <textarea id="recipeNotesInput" rows="5" placeholder="שלבי ההכנה, מרכיבים..." autocomplete="off"></textarea>
         </label>
         <label>
           קישור (אופציונלי)
-          <input type="url" id="recipeLinkInput" placeholder="https://..." />
+          <input type="url" id="recipeLinkInput" placeholder="https://..." autocomplete="off" />
         </label>
         <button class="primary-button" type="submit">שמור מתכון ✓</button>
       </form>

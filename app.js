@@ -1328,11 +1328,9 @@ function registerEvents() {
     const toggleBtn = e.target.closest("[data-toggle-recipe]");
     if (toggleBtn) {
       const item = toggleBtn.closest(".recipe-item");
-      const body = item.querySelector(".recipe-item__body");
-      const isOpen = !body.hidden;
-      body.hidden = isOpen;
-      toggleBtn.setAttribute("aria-expanded", String(!isOpen));
+      const isOpen = item.classList.contains("recipe-item--open");
       item.classList.toggle("recipe-item--open", !isOpen);
+      toggleBtn.setAttribute("aria-expanded", String(!isOpen));
       return;
     }
 
@@ -2307,7 +2305,7 @@ function renderRecipes() {
             <span class="recipe-item__title">${safe(recipe.title)}</span>
             <span class="recipe-item__chevron">›</span>
           </button>
-          <div class="recipe-item__body" hidden>
+          <div class="recipe-item__body">
             ${notesHtml}
             ${linkHtml}
             <div class="recipe-item__actions">
