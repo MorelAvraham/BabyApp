@@ -2771,64 +2771,149 @@ button,
 }
 
 /* ── Recipes ────────────────────────────────────── */
-.recipe-card {
-  background: var(--surface);
-  border-radius: 20px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  box-shadow: var(--shadow-card);
+.recipes-hero {
+  background:
+    radial-gradient(circle at top left, rgba(242, 135, 107, 0.22), transparent 52%),
+    linear-gradient(180deg, rgba(255, 248, 244, 0.98), rgba(255, 238, 228, 0.96));
+  border-color: rgba(242, 135, 107, 0.24);
+}
+
+[data-theme="dark"] .recipes-hero {
+  background:
+    radial-gradient(circle at top left, rgba(201, 79, 52, 0.18), transparent 52%),
+    linear-gradient(180deg, rgba(35, 20, 14, 0.98), rgba(28, 15, 10, 0.96));
+  border-color: rgba(242, 135, 107, 0.16);
+}
+
+.recipes-hero__content {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.recipe-card__title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--text);
+.recipes-hero__content h2 {
+  margin: 0 0 4px;
 }
 
-.recipe-card__notes {
-  font-size: 0.88rem;
+.recipes-hero__subtitle {
+  margin: 0;
   color: var(--muted);
-  white-space: pre-wrap;
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
-.recipe-card__link {
-  font-size: 0.82rem;
-  color: var(--accent-deep);
-  text-decoration: underline;
-  word-break: break-all;
-}
-
-.recipe-card__footer {
+.recipes-hero__badge {
+  min-width: 76px;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(242, 135, 107, 0.12);
+  color: var(--accent-deep);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
-.recipe-card__delete {
+[data-theme="dark"] .recipes-hero__badge {
+  background: rgba(242, 135, 107, 0.14);
+  color: #f4a98a;
+}
+
+.recipes-hero__badge strong {
+  font-size: 1.4rem;
+  color: inherit;
+  line-height: 1;
+}
+
+/* Recipe item cards */
+.recipe-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(70, 46, 36, 0.06);
+}
+
+.recipe-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.recipe-item__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recipe-item__delete {
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 1rem;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 6px;
   border-radius: 8px;
   min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 140ms ease, color 140ms ease;
 }
 
-.recipe-card__delete:hover {
+.recipe-item__delete:hover {
   background: var(--accent-soft);
   color: var(--accent-deep);
 }
 
+.recipe-item__notes {
+  font-size: 0.88rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.recipe-item__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  align-self: flex-start;
+  word-break: break-all;
+  transition: opacity 140ms ease;
+}
+
+.recipe-item__link:hover {
+  opacity: 0.8;
+}
+
+/* Form textarea */
 #recipeForm textarea {
   min-height: 120px;
   padding: 12px 16px;
   border-radius: 16px;
   border: 1.5px solid var(--line);
-  background: var(--surface-strong);
+  background: var(--bg);
   color: var(--text);
   font-family: inherit;
   font-size: 1rem;
@@ -2836,12 +2921,17 @@ button,
   width: 100%;
   box-sizing: border-box;
   direction: rtl;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+[data-theme="dark"] #recipeForm textarea {
+  background: var(--surface);
 }
 
 #recipeForm textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 3px rgba(242, 135, 107, 0.18);
 }
 
 .recipes-empty {
@@ -2849,4 +2939,5 @@ button,
   color: var(--muted);
   padding: 40px 20px;
   font-size: 0.95rem;
+  line-height: 1.6;
 }

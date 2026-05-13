@@ -344,13 +344,30 @@
 
       <!-- Recipes Tab -->
       <div class="tab-view" id="tabRecipes">
-        <div class="panel">
-          <div class="panel-heading">
-            <h2>המתכונים שלי</h2>
-            <button class="secondary-button" id="addRecipeBtn" type="button">+ הוסף מתכון</button>
+        <section class="hero-panel recipes-hero">
+          <div class="recipes-hero__content">
+            <div>
+              <p class="panel-kicker">מאגר מתכונים</p>
+              <h2>המתכונים שלי</h2>
+              <p class="recipes-hero__subtitle">שמור מתכונים, הערות הכנה וקישורים במקום אחד.</p>
+            </div>
+            <div class="recipes-hero__badge">
+              <span>מתכונים</span>
+              <strong id="recipesCountText">0</strong>
+            </div>
           </div>
-        </div>
-        <div id="recipesList"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">הספרייה שלי</p>
+              <h2>כל המתכונים</h2>
+            </div>
+            <button class="secondary-button" id="addRecipeBtn" type="button">+ הוסף</button>
+          </div>
+          <div id="recipesList" class="stack-list"></div>
+        </section>
       </div><!-- /tabRecipes -->
 
     </main>
@@ -686,22 +703,27 @@
   <!-- Recipes Sheet -->
   <div class="bottom-sheet" id="recipeSheet" role="dialog" aria-modal="true" aria-label="הוסף מתכון">
     <div class="sheet-handle"></div>
-    <h2 class="sheet-title">מתכון חדש</h2>
-    <form id="recipeForm" class="form-grid">
-      <label>
-        שם המתכון *
-        <input type="text" id="recipeTitleInput" placeholder="לדוגמה: פירה גזר ובטטה" required />
-      </label>
-      <label>
-        הערות / הכנה
-        <textarea id="recipeNotesInput" rows="5" placeholder="שלבי ההכנה, מרכיבים..."></textarea>
-      </label>
-      <label>
-        קישור (אופציונלי)
-        <input type="url" id="recipeLinkInput" placeholder="https://..." />
-      </label>
-      <button class="primary-button" type="submit">שמור מתכון</button>
-    </form>
+    <div class="sheet-header">
+      <h3>מתכון חדש 📖</h3>
+      <button class="sheet-close" id="closeSheetRecipe" type="button" aria-label="סגור">✕</button>
+    </div>
+    <div class="sheet-body">
+      <form id="recipeForm" class="form-grid">
+        <label>
+          שם המתכון *
+          <input type="text" id="recipeTitleInput" placeholder="לדוגמה: פירה גזר ובטטה" required />
+        </label>
+        <label>
+          הערות / הכנה
+          <textarea id="recipeNotesInput" rows="5" placeholder="שלבי ההכנה, מרכיבים..."></textarea>
+        </label>
+        <label>
+          קישור (אופציונלי)
+          <input type="url" id="recipeLinkInput" placeholder="https://..." />
+        </label>
+        <button class="primary-button" type="submit">שמור מתכון ✓</button>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="./app.js"></script>

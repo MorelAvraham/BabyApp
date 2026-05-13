@@ -438,11 +438,13 @@ const el = {
 
   recipeSheet:         document.getElementById("recipeSheet"),
   addRecipeBtn:        document.getElementById("addRecipeBtn"),
+  closeSheetRecipe:    document.getElementById("closeSheetRecipe"),
   recipeForm:          document.getElementById("recipeForm"),
   recipeTitleInput:    document.getElementById("recipeTitleInput"),
   recipeNotesInput:    document.getElementById("recipeNotesInput"),
   recipeLinkInput:     document.getElementById("recipeLinkInput"),
   recipesList:         document.getElementById("recipesList"),
+  recipesCountText:    document.getElementById("recipesCountText"),
 };
 
 // ============================================================
@@ -1279,6 +1281,8 @@ function registerEvents() {
     openSheet("recipeSheet");
     el.recipeTitleInput.focus();
   });
+
+  el.closeSheetRecipe?.addEventListener("click", () => closeAllSheets());
 
   el.recipeForm?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -2229,8 +2233,10 @@ function renderRecipes() {
   const container = el.recipesList;
   if (!container) return;
 
+  if (el.recipesCountText) el.recipesCountText.textContent = recipes.length;
+
   if (recipes.length === 0) {
-    container.innerHTML = '<p class="recipes-empty">אין מתכונים עדיין. לחץ על "+ הוסף מתכון" כדי להתחיל.</p>';
+    container.innerHTML = '<p class="recipes-empty">📖<br>אין מתכונים עדיין.<br>לחץ "+ הוסף" כדי להתחיל.</p>';
     return;
   }
 
@@ -2239,19 +2245,19 @@ function renderRecipes() {
     .reverse()
     .map((recipe) => {
       const linkHtml = recipe.link
-        ? `<a class="recipe-card__link" href="${recipe.link}" target="_blank" rel="noopener noreferrer">${recipe.link}</a>`
+        ? `<a class="recipe-item__link" href="${recipe.link}" target="_blank" rel="noopener noreferrer">🔗 פתח קישור</a>`
         : "";
       const notesHtml = recipe.notes
-        ? `<p class="recipe-card__notes">${recipe.notes.replace(/</g, "&lt;")}</p>`
+        ? `<p class="recipe-item__notes">${recipe.notes.replace(/</g, "&lt;")}</p>`
         : "";
       return `
-        <div class="recipe-card" data-recipe-id="${recipe.id}">
-          <div class="recipe-card__title">${recipe.title.replace(/</g, "&lt;")}</div>
+        <div class="recipe-item" data-recipe-id="${recipe.id}">
+          <div class="recipe-item__header">
+            <span class="recipe-item__title">${recipe.title.replace(/</g, "&lt;")}</span>
+            <button class="recipe-item__delete" data-delete-recipe="${recipe.id}" type="button" aria-label="מחק מתכון">🗑</button>
+          </div>
           ${notesHtml}
           ${linkHtml}
-          <div class="recipe-card__footer">
-            <button class="recipe-card__delete" data-delete-recipe="${recipe.id}" type="button">🗑 מחק</button>
-          </div>
         </div>`;
     })
     .join("");
