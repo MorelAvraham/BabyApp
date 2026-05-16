@@ -92,13 +92,21 @@ if (pinForm) {
 const EMOJI = {
   wake: "☀️", sleep: "🌙", meal: "🍼",
   poop: "💩", pee: "💦", medication: "💊", tasting: "🥦",
-  roll: "🔄", crawl: "🐛", sit: "🧘", stand: "🧍", walk: "👣",
+  roll: "🔄", crawl4: "🐾", crawl: "🐛", sit: "🧘", stand: "🧍", walk: "👣",
+  "solid-poop": "💩", "first-food": "🥄", cup: "🥤",
+  tooth: "🦷", haircut: "✂️",
+  smile: "😊", laugh: "😄", wave: "👋", word: "🗣️",
+  "sleep-through": "🌙",
 };
 
 const LABELS = {
   wake: "התעורר",  sleep: "נרדם", meal: "אכל",
   poop: "קקי", pee: "פיפי",  medication: "תרופה/ויטמין", tasting: "טעימה",
-  roll: "התהפך",   crawl: "זחל",      sit: "ישב לבד", stand: "עמד", walk: "הלך",
+  roll: "התהפך", crawl4: "זחל על 4", crawl: "זחל (בטן)", sit: "ישב לבד", stand: "עמד", walk: "הלך",
+  "solid-poop": "קקי מוצק", "first-food": "אוכל מוצק ראשון", cup: "שתה מכוס",
+  tooth: "שן ראשונה", haircut: "תספורת ראשונה",
+  smile: "חיוך ראשון", laugh: "צחוק ראשון", wave: "להתנפנף שלום", word: "מילה ראשונה",
+  "sleep-through": "ישן לילה שלם",
 };
 
 const WHO_LABELS = { 
